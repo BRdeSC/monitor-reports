@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📊 Prometheus Monthly Reports
 
-## Getting Started
+Sistema de extração de métricas do Prometheus para visualização de dados,
+geração de relatórios e exportação em PDF, com seletor por período. 
 
-First, run the development server:
+## 🚀 Tecnologias
+- **Framework:** Next.js 15 (App Router)
+- **Linguagem:** TypeScript
+- **Estilização:** Tailwind CSS
+- **Monitoramento:** Prometheus API
+- **Exportação:** @react-pdf/renderer
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🛠️ Como rodar o projeto localmente
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Clone o repositório:**
+   git clone [https://github.com/seu-usuario/monitor-reports.git](https://github.com/seu-usuario/monitor-reports.git)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Opção 1: Docker Compose (Recomendado)
+Certifique-se de ter o Docker instalado.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Configure o ambiente:
+   cp .env.example .env.local
 
-## Learn More
+3. Suba o container:
+  docker compose up --build -d
+  
+4. Acesse em: http://localhost:3000
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Opção 2: Desenvolvimento Local (Node.js)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Instale as dependências:
+  npm install
 
-## Deploy on Vercel
+3. Configure as variáveis de ambiente:
+  Crie um arquivo .env.local na raiz e adicione a URL do seu Prometheus:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+  PROMETHEUS_URL=http://seu-ip-ou-localhost:9090
+  
+4. Inicie o servidor de desenvolvimento:
+  npm run dev
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+📈 Funcionalidades Planejadas
+
+[x] Conexão dinâmica com API do Prometheus
+
+[ ] Interface de seleção de períodos mensais
+
+[ ] Visualização de dados em tabelas e gráficos
+
+[ ] Exportação de relatórios em PDF
