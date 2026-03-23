@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
       const { start, end } = getMonthInterval(year, month);
       
       // Busca no histórico exato do mês selecionado
-      const data = await queryPrometheusRange(q, start, end, '4h'); 
+      //const data = await queryPrometheusRange(q, start, end, '4h'); 
+      const data = await queryPrometheusRange(q, start, end, '1d'); // Teste com 1 dia
       return NextResponse.json(data);
     }
 

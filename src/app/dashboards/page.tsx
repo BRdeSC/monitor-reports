@@ -9,13 +9,13 @@ export default function PerformancePage() {
       
       {/* Espaço reservado para os futuros cards de porcentagem */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 opacity-50">
-        <div className="h-32 bg-gray-100 rounded-xl border-2 border-dashed flex items-center justify-center">
+        <div className="h-32 bg-blue-100 rounded-xl border-2 border-dashed flex items-center justify-center text-gray-900">
           Média de GPU %
         </div>
-        <div className="h-32 bg-gray-100 rounded-xl border-2 border-dashed flex items-center justify-center">
+        <div className="h-32 bg-blue-100 rounded-xl border-2 border-dashed flex items-center justify-center text-gray-900">
           Uso de Memória
         </div>
-        <div className="h-32 bg-gray-100 rounded-xl border-2 border-dashed flex items-center justify-center">
+        <div className="h-32 bg-blue-100 rounded-xl border-2 border-dashed flex items-center justify-center text-gray-900">
           IOPS Médio
         </div>
       </div>

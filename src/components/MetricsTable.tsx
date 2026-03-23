@@ -57,7 +57,7 @@ export default function MetricsTable({ data }: { data: any }) {
           <tr>
             <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Recurso Identificado</th>
             <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Métrica / Labels</th>
-            <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-widest">Valor Formatado</th>
+            <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-widest">Valor</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
@@ -90,7 +90,7 @@ export default function MetricsTable({ data }: { data: any }) {
                       .filter(([key]) => !['__name__', 'instance', 'job'].includes(key))
                       .map(([key, val]) => (
                         <span key={key} className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">
-                          {key}: {val}
+                          {key}: {String(val)}
                         </span>
                       ))}
                   </div>

@@ -5,7 +5,7 @@ export default function MonthPicker({ onChange }: { onChange: (date: string) => 
     { label: 'Janeiro', value: '01' },
     { label: 'Fevereiro', value: '02' },
     { label: 'Março', value: '03' },
-    { label: 'Abril', value: '4' },
+    { label: 'Abril', value: '04' },
     // ... adicione os outros meses
   ];
 

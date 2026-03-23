@@ -1,48 +1,44 @@
 'use client'
-import { useState, useEffect } from 'react';
-import MonthPicker from '@/components/MonthPicker';
+import { useState, useEffect, useCallback } from 'react';
 import MetricsTable from '@/components/MetricsTable';
-import { Loader2, FileDown, Activity, RefreshCw } from 'lucide-react';
+import { Loader2, FileDown, Activity, RefreshCw, Search } from 'lucide-react';
 
-export default function HomePage() {
+export default function MetricsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Estados de seleção
   const [query, setQuery] = useState('up');
-  const [selectedMonth, setSelectedMonth] = useState('');
   const [availableMetrics, setAvailableMetrics] = useState<string[]>([]);
 
-  // 1. Carrega a lista de métricas para o Select
+  // 1. Carrega a lista de métricas disponíveis no servidor
   const fetchMetricsList = async () => {
     setLoadingMetrics(true);
     try {
       const response = await fetch('/api/metrics/list');
       const result = await response.json();
       if (result.status === 'success') {
-        // Ordenamos alfabeticamente para facilitar a leitura no Select
         const sorted = (result.data as string[]).sort();
         setAvailableMetrics(sorted);
       }
     } catch (error) {
-      console.error("Erro ao carregar lista:", error);
+      console.error("Erro ao carregar catálogo:", error);
     } finally {
       setLoadingMetrics(false);
     }
   };
 
-  // 2. Busca os dados da métrica selecionada
-  const fetchMetricsData = async (month?: string, customQuery?: string) => {
-    const activeMonth = month || selectedMonth;
+  // 2. Busca os dados da métrica selecionada (Tempo Real)
+  const fetchMetricsData = useCallback(async (customQuery?: string, isManual = false) => {
     const activeQuery = customQuery || query;
+    
+    if (isManual) setIsRefreshing(true);
+    else setLoading(true);
 
-    setLoading(true);
     try {
-      const url = activeMonth 
-        ? `/api/metrics?query=${activeQuery}&month=${activeMonth}&year=2026` 
-        : `/api/metrics?query=${activeQuery}`;
-        
+      // Chamando a rota /instant sem parâmetros de mês
+      const url = `/api/metrics/instant?query=${encodeURIComponent(activeQuery)}`;
       const response = await fetch(url);
       const result = await response.json();
       setData(result);
@@ -50,83 +46,87 @@ export default function HomePage() {
       console.error("Erro ao buscar dados:", error);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, [query]);
 
+  // Efeito inicial e Auto-refresh a cada 60 segundos
   useEffect(() => {
     fetchMetricsList();
     fetchMetricsData();
-  }, []);
+
+    const interval = setInterval(() => {
+      fetchMetricsData(undefined, true);
+    }, 60000); 
+
+    return () => clearInterval(interval);
+  }, [fetchMetricsData]);
 
   return (
-    <main className="p-8 bg-gray-50 min-h-screen max-w-6xl mx-auto">
-      <header className="flex justify-between items-center mb-8 border-b pb-6">
+    <main className="p-8 bg-gray-50 min-h-screen max-w-6xl mx-auto space-y-8">
+      <header className="flex justify-between items-end border-b pb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Relatórios de Monitoramento</h1>
-          <p className="text-gray-500 font-medium">Análise de métricas consolidadas</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tighter uppercase">Explorador de Métricas</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Live Monitoring via Prometheus</p>
+          </div>
         </div>
         
-        {data && (
-          <button className="flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-lg hover:bg-green-700 transition shadow-md font-semibold">
-            <FileDown size={20} />
-            Exportar PDF
+        <div className="flex gap-3">
+          <button 
+            onClick={() => fetchMetricsData(query, true)}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-xl text-[10px] font-black text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm active:scale-95"
+          >
+            <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+            {isRefreshing ? "ATUALIZANDO..." : "RECARREGAR DADOS"}
           </button>
-        )}
+
+          {data && (
+            <button className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl hover:bg-black transition shadow-md text-[10px] font-black uppercase tracking-widest">
+              <FileDown size={16} />
+              Exportar Snapshot
+            </button>
+          )}
+        </div>
       </header>
 
-      {/* FILTROS */}
-      <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-home">
-          
-          {/* SELECT DE MÉTRICAS */}
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 uppercase">
-              <Activity size={16} className="text-blue-500" />
-              Escolha a Métrica
-            </label>
-            <div className="relative">
-              <select 
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  fetchMetricsData(selectedMonth, e.target.value);
-                }}
-                disabled={loadingMetrics}
-                className="w-full border-2 border-gray-100 p-3 rounded-xl bg-gray-50 focus:border-blue-500 focus:bg-white outline-none text-gray-900 appearance-none cursor-pointer"
-              >
-                {loadingMetrics ? (
-                  <option>Carregando métricas...</option>
-                ) : (
-                  availableMetrics.map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))
-                )}
-              </select>
-              {/* Ícone de seta customizado para o select */}
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
-                <RefreshCw size={16} className={loadingMetrics ? "animate-spin" : ""} />
-              </div>
-            </div>
+      {/* FILTRO DE BUSCA ÚNICO */}
+      <section className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+            <Search size={14} />
+            Selecione a Métrica do Datacenter
+          </label>
+          <div className="relative">
+            <select 
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                fetchMetricsData(e.target.value);
+              }}
+              disabled={loadingMetrics}
+              className="w-full border-2 border-gray-50 p-4 rounded-2xl bg-gray-50 focus:border-blue-500 focus:bg-white outline-none text-gray-900 font-mono text-sm appearance-none cursor-pointer transition-all"
+            >
+              {loadingMetrics ? (
+                <option>Carregando catálogo do servidor...</option>
+              ) : (
+                availableMetrics.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))
+              )}
+            </select>
           </div>
-
-          {/* SELEÇÃO DO MÊS */}
-          <div className="space-y-3">
-            <label className="text-sm font-bold text-gray-700 uppercase">Período Mensal</label>
-            <MonthPicker onChange={(m) => {
-              setSelectedMonth(m);
-              fetchMetricsData(m);
-            }} />
-          </div>
-          
         </div>
       </section>
 
-      {/* RESULTADOS */}
+      {/* ÁREA DE RESULTADOS */}
       <section className="min-h-[400px]">
         {loading ? (
-          <div className="flex flex-col justify-center items-center py-32 space-y-4 bg-white rounded-2xl border-2 border-dashed">
+          <div className="flex flex-col justify-center items-center py-32 space-y-4 bg-white rounded-3xl border-2 border-dashed border-gray-100">
             <Loader2 className="animate-spin text-blue-600" size={40} />
-            <span className="text-gray-600 font-bold">Acessando Prometheus...</span>
+            <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Consultando Banco de Dados...</span>
           </div>
         ) : (
           <MetricsTable data={data} />
