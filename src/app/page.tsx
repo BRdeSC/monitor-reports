@@ -66,7 +66,7 @@ export default function MetricsPage() {
     <main className="p-8 bg-gray-50 min-h-screen max-w-6xl mx-auto space-y-8">
       <header className="flex justify-between items-end border-b pb-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tighter uppercase">Explorador de Métricas</h1>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tighter uppercase">Métricas Gerais</h1>
           <div className="flex items-center gap-2 mt-1">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Live Monitoring via Prometheus</p>

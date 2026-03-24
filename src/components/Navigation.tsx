@@ -8,9 +8,9 @@ export default function Navigation() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: 'Status Geral', href: '/', icon: Activity },
-    { name: 'Performance', href: '/performance', icon: BarChart3 },
-    { name: 'Dashboards', href: '/dashboards', icon: LayoutDashboard },
+    { name: 'Métricas Gerais', href: '/', icon: Activity },
+    { name: 'Status do Ambiente', href: '/performance', icon: LayoutDashboard },
+    { name: 'Dashboards', href: '/dashboards', icon: BarChart3 },
   ];
 
   return (

@@ -69,25 +69,41 @@ export default function PerformancePage() {
       {/* SEÇÃO JACI */}
       <section className="animate-in fade-in duration-700">
         <HeaderSection icon={<Server size={22}/>} title="Jaci (HPC - PBS)" color="bg-blue-600" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <StatCard title="Uso CPU" value={res.jaci_cpu} isPercentage color="text-blue-600" />
+          <StatCard title="Uso Memória" value={res.jaci_mem} isPercentage color="text-blue-600" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8 items-center">
           <StatCard title="Nodes Totais" value={res.jaci_nodes_total} color="text-gray-900" />
           <StatCard title="Jobs Executando" value={res.jaci_running} color="text-emerald-600" />
           <StatCard title="Jobs em Fila" value={res.jaci_queued} color="text-orange-500" />
+
+          <StatCard title="Nodes Disponiveis" value={res.jaci_nodes_free} color="text-emerald-600" />
+          <StatCard title="Nodes Ocupados" value={res.jaci_nodes_busy} color="text-orange-600" />
+          <StatCard title="Nodes Indisponiveis" value={res.jaci_nodes_down} color="text-red-600" />
         </div>
         <QueueTable title="Filas de Processamento (Jaci)" queues={res.jaci_queues} color="border-blue-100" />
       </section>
 
       <hr className="border-gray-100" />
+      <hr className="border-gray-100" />
+      <hr className="border-gray-100" />
 
       {/* SEÇÃO EGEON */}
       <section className="animate-in fade-in duration-1000">
         <HeaderSection icon={<Layers size={22}/>} title="Egeon (HPC - Slurm)" color="bg-purple-600" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <StatCard title="Uso CPU" value={res.egeon_cpu} isPercentage color="text-purple-600" />
+          <StatCard title="Uso CPU" value={res.egeon_mem} isPercentage color="text-purple-600" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8 items-center">
           <StatCard title="Nodes Totais" value={res.egeon_nodes_total} color="text-gray-900" />
           <StatCard title="Jobs Executando" value={res.egeon_running} color="text-emerald-600" />
           <StatCard title="Jobs em Fila" value={res.egeon_queued} color="text-orange-500" />
+
+          <StatCard title="Teste Nodes Disponiveis" value={res.egeon_nodes_free} color="text-emerald-600" />
+          <StatCard title="Teste Nodes Ocupados" value={res.egeon_nodes_busy} color="text-orange-600" />
+          <StatCard title="Teste Nodes Indisponiveis" value={res.egeon_nodes_down} color="text-red-600" />
         </div>
         <QueueTable title="Partições Slurm (Egeon)" queues={res.egeon_queues} color="border-purple-100" />
       </section>
