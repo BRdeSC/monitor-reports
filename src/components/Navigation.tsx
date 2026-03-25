@@ -11,6 +11,8 @@ export default function Navigation() {
     { name: 'Métricas Gerais', href: '/', icon: Activity },
     { name: 'Status do Ambiente', href: '/performance', icon: LayoutDashboard },
     { name: 'Dashboards', href: '/dashboards', icon: BarChart3 },
+    { name: 'Servidores', href: '/servidores', icon: BarChart3 },
+    { name: 'Uso_usuarios', href: '/usuarios', icon: BarChart3 },
   ];
 
   return (

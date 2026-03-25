@@ -95,9 +95,13 @@ export default function PerformancePage() {
           </StatCard>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8 items-center">
-          <StatCard title="Nodes Totais" value={res.jaci_nodes_total} color="text-blue-600" />
           <StatCard title="Jobs Executando" value={res.jaci_running} color="text-emerald-600" />
-          <StatCard title="Jobs em Fila" value={res.jaci_queued} color="text-orange-500" />
+          <StatCard 
+            title="Jobs em Fila" 
+            value={parseInt(res.jaci_queued || 0) + parseInt(res.jaci_held || 0)} 
+            color="text-orange-500" 
+          />
+          <StatCard title="Nodes Totais" value={res.jaci_nodes_total} color="text-blue-600" />
 
           <StatCard title="Nodes Disponiveis" value={res.jaci_nodes_free} color="text-emerald-600" />
           <StatCard title="Nodes Ocupados" value={res.jaci_nodes_busy} color="text-orange-600" />
@@ -128,13 +132,13 @@ export default function PerformancePage() {
           </StatCard>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8 items-center">
-          <StatCard title="Nodes Totais" value={res.egeon_nodes_total} color="text-blue-600" />
           <StatCard title="Jobs Executando" value={res.egeon_running} color="text-emerald-600" />
           <StatCard title="Jobs em Fila" value={res.egeon_queued} color="text-orange-500" />
+          <StatCard title="Nodes Totais" value={res.egeon_nodes_total} color="text-blue-600" />
 
-          <StatCard title="Teste Nodes Disponiveis" value={res.egeon_nodes_free} color="text-emerald-600" />
-          <StatCard title="Teste Nodes Ocupados" value={res.egeon_nodes_busy} color="text-orange-600" />
-          <StatCard title="Teste Nodes Indisponiveis" value={res.egeon_nodes_down} color="text-red-600" />
+          <StatCard title="Nodes Disponiveis" value={res.egeon_nodes_free} color="text-emerald-600" />
+          <StatCard title="Nodes Ocupados" value={res.egeon_nodes_busy} color="text-orange-600" />
+          <StatCard title="Nodes Indisponiveis" value={res.egeon_nodes_down} color="text-red-600" />
         </div>
         <QueueTable title="Partições Slurm (Egeon)" queues={res.egeon_queues} color="border-purple-100" />
       </section>

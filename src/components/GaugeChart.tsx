@@ -16,21 +16,20 @@ export default function CustomGauge({ value }: Props) {
         minValue={0}
         value={cleanValue}
         needleColor="red"
-        startColor="#22c55e" // Verde
-        endColor="#f10814ce"   // Vermelho
+        needleHeightRatio={0.8} // Contração do ponteiro
+        
         segments={4}
+        segmentColors={[
+          "#10b94e", // Para 4 cores: 0-25, 50, 75, 
+          "#87c522", //  Para 3 cores: 0-33%: Verde (Início)
+          "#eab308", // 33-66%: Laranja (Meio)
+          "#ef4444"  // 66-100%: Vermelho (Fim)
+        ]}
         ringWidth={10}
-        
-        // --- ARREDONDAMENTO E TEXTO ---
-        // Aqui dizemos para o D3 formatar com 1 casa decimal e adicionar o %
-        currentValueText={`${cleanValue.toFixed(1)}%`} 
-        
-        // Estilo do texto que fica embaixo da agulha
-        valueTextFontSize="14px"
-        valueTextColor="#475569" // Um cinza escuro elegante
-        
-        // Esconde os números da escala nas pontas (0 e 100) para não poluir
-        labelFontSize="0" 
+        currentValueText={`${cleanValue.toFixed(1)}%`} // formatar com 1 casa decimal e adicionar o % 
+        valueTextFontSize="14px" // Estilo do texto que fica embaixo da agulha
+        textColor="#475569" // Um cinza escuro elegante
+        labelFontSize="0"  // Esconde os números da escala nas pontas (0 e 100) para não poluir
         
         // Dimensões
         width={200}
