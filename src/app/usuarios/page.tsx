@@ -1,22 +1,22 @@
 // src/app/performance/page.tsx
-export default function PerformancePage() {
+export default function UsuariosPage() {
   return (
     <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-      <h1 className="text-2xl font-bold text-gray-900">Dashboards! </h1>
+      <h1 className="text-2xl font-bold text-gray-900">Usuários! </h1>
       <p className="text-gray-500 mt-2">
-        Esta tela será destinada aos dashboars.
+        Esta tela será destinada para as métricas de usuários.
       </p>
       
       {/* Espaço reservado para os futuros cards de porcentagem */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 opacity-50">
-        <div className="h-32 bg-blue-100 rounded-xl border-2 border-dashed flex items-center justify-center text-gray-900">
-          Média de GPU %
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-1 gap-6 opacity-50">
+        {/* <div className="h-32 bg-blue-100 rounded-xl border-2 border-dashed flex items-center justify-center text-gray-900">
+          Teste
         </div>
         <div className="h-32 bg-blue-100 rounded-xl border-2 border-dashed flex items-center justify-center text-gray-900">
-          Uso de Memória
-        </div>
+          teste
+        </div> */}
         <div className="h-32 bg-blue-100 rounded-xl border-2 border-dashed flex items-center justify-center text-gray-900">
-          IOPS Médio
+          teste
         </div>
       </div>
     </div>

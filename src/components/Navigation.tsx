@@ -2,7 +2,7 @@
 'use client'
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, BarChart3, LayoutDashboard } from 'lucide-react';
+import { Activity, BarChart3, LayoutDashboard, Server, Users } from 'lucide-react';
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -11,8 +11,8 @@ export default function Navigation() {
     { name: 'Métricas Gerais', href: '/', icon: Activity },
     { name: 'Status do Ambiente', href: '/performance', icon: LayoutDashboard },
     { name: 'Dashboards', href: '/dashboards', icon: BarChart3 },
-    { name: 'Servidores', href: '/servidores', icon: BarChart3 },
-    { name: 'Uso_usuarios', href: '/usuarios', icon: BarChart3 },
+    { name: 'Servidores', href: '/servidores', icon: Server },
+    { name: 'Uso_usuarios', href: '/usuarios', icon: Users },
   ];
 
   return (
