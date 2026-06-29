@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Server, Layers, Activity, ListOrdered, RefreshCw, Clock } from 'lucide-react';
+import { Loader2, Server, Layers, ListOrdered, RefreshCw, Clock, ArrowUpRight } from 'lucide-react';
 import CustomGauge from '@/components/GaugeChart';
 
 export default function PerformancePage() {
@@ -9,7 +9,7 @@ export default function PerformancePage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>('');
 
-  // Função memorizada para buscar dados
+  // Função para buscar dados
   const fetchData = useCallback(async (manual = false) => {
     if (manual) setIsRefreshing(true);
     try {
@@ -34,169 +34,180 @@ export default function PerformancePage() {
   }, [fetchData]);
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+    <div className="flex flex-col items-center justify-center py-32 bg-white rounded-3xl border border-slate-100 shadow-sm">
       <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
-      <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Sincronizando com HPC...</p>
+      <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Sincronizando com HPC...</p>
     </div>
   );
 
-  if (!res) return <div className="p-10 text-center text-red-500 font-bold">Falha ao carregar dados do Prometheus.</div>;
+  if (!res) return (
+    <div className="p-12 text-center bg-white rounded-3xl border border-red-100 shadow-sm">
+      <p className="text-red-500 font-bold">Falha ao carregar dados do Prometheus.</p>
+      <button 
+        onClick={() => fetchData()} 
+        className="mt-4 px-5 py-2.5 bg-red-50 text-red-600 rounded-xl font-bold text-xs hover:bg-red-600 hover:text-white transition-all"
+      >
+        Tentar Novamente
+      </button>
+    </div>
+  );
 
   return (
-    <main className="space-y-6 pb-20">
-      {/* CABEÇALHO DE CONTROLE */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Monitoramento em Tempo Real</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-500">
-            <Clock size={14} />
-            <span className="text-xs font-medium">Última atualização: {lastUpdate}</span>
+    <main className="space-y-8 pb-20">
+      {/* CABEÇALHO DA PÁGINA */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Status do Ambiente</h1>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Estado operacional dos clusters</p>
           </div>
         </div>
 
-        <button 
-          onClick={() => fetchData(true)}
-          disabled={isRefreshing}
-          className="flex items-center gap-2 bg-blue-50 text-blue-600 px-6 py-3 rounded-2xl font-bold text-xs hover:bg-blue-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-        >
-          <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
-          {isRefreshing ? "ATUALIZANDO..." : "ATUALIZAR AGORA"}
-        </button>
-      </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 text-slate-500 text-xs bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-200">
+            <Clock size={14} className="text-slate-400" />
+            <span className="font-medium">Atualizado: {lastUpdate}</span>
+          </div>
+
+          <button 
+            onClick={() => fetchData(true)}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 shadow-md shadow-blue-500/10"
+          >
+            <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+            {isRefreshing ? "ATUALIZANDO..." : "ATUALIZAR AGORA"}
+          </button>
+        </div>
+      </header>
 
       {/* SEÇÃO JACI */}
-      <section className="animate-in fade-in duration-700">
-        <HeaderSection icon={<Server size={22}/>} title="Jaci (HPC - PBS)" color="bg-blue-600" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-
+      <section className="animate-in fade-in duration-500 bg-white p-6 md:p-8 rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
+        <HeaderSection icon={<Server size={20}/>} title="Cluster Jaci (HPC - PBS)" color="bg-blue-600" />
+        
+        {/* Grid de CPU / Memória */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <StatCard 
-            title="Uso CPU" 
+            title="Uso de CPU" 
             value={res.jaci_cpu} 
             isPercentage 
             color="text-blue-600"
           >
-            <div className="w-[180px] h-[120px] -mr-4">
+            <div className="w-[180px] h-[125px] flex items-center justify-center overflow-hidden -mr-2">
               <CustomGauge value={Number(res.jaci_cpu || 0)} />
             </div>
           </StatCard>
 
           <StatCard 
-            title="USO MEMÓRIA" 
+            title="Uso de Memória" 
             value={res.jaci_mem} 
             isPercentage 
             color="text-blue-600"
           >
-            <div className="w-[180px] h-[120px] -mr-4">
+            <div className="w-[180px] h-[125px] flex items-center justify-center overflow-hidden -mr-2">
               <CustomGauge value={Number(res.jaci_mem || 0)} />
             </div>
           </StatCard>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8 items-center">
-          <StatCard title="Jobs Executando" value={res.jaci_running} color="text-emerald-600" />
-          <StatCard 
+
+        {/* Grid de Métricas Secundárias / Nodes */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <BadgeCard title="Jobs Executando" value={res.jaci_running} status="success" />
+          <BadgeCard 
             title="Jobs em Fila" 
             value={parseInt(res.jaci_queued || 0) + parseInt(res.jaci_held || 0)} 
-            color="text-orange-500" 
+            status="warning" 
           />
-          <StatCard title="Nodes Totais" value={res.jaci_nodes_total} color="text-blue-600" />
-
-          <StatCard title="Nodes Disponiveis" value={res.jaci_nodes_free} color="text-emerald-600" />
-          <StatCard title="Nodes Ocupados" value={res.jaci_nodes_busy} color="text-orange-600" />
-          <StatCard title="Nodes Indisponiveis" value={res.jaci_nodes_down} color="text-red-600" />
+          <BadgeCard title="Nodes Totais" value={res.jaci_nodes_total} status="neutral" />
+          <BadgeCard title="Nodes Livres" value={res.jaci_nodes_free} status="success" />
+          <BadgeCard title="Nodes Ocupados" value={res.jaci_nodes_busy} status="info" />
+          <BadgeCard title="Nodes Inativos" value={res.jaci_nodes_down} status="danger" />
         </div>
-        <QueueTable title="Filas de Processamento (Jaci)" queues={res.jaci_queues} color="border-blue-100" />
+
+        {/* Filas */}
+        <QueueTable title="Filas de Processamento (Jaci)" queues={res.jaci_queues} color="border-blue-100/50" />
       </section>
 
-      <hr className="border-gray-100" />
-      <hr className="border-green-900" />
-      <hr className="border-gray-100" />
-
       {/* SEÇÃO EGEON */}
-      <section className="animate-in fade-in duration-1000">
-        <HeaderSection icon={<Layers size={22}/>} title="Egeon (HPC - Slurm)" color="bg-purple-600" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-
-          <StatCard title="USO CPU" value={res.egeon_cpu} isPercentage color="text-purple-600">
-            <div className="w-[180px] h-[120px] -mr-4">
+      <section className="animate-in fade-in duration-500 bg-white p-6 md:p-8 rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
+        <HeaderSection icon={<Layers size={20}/>} title="Cluster Egeon (HPC - Slurm)" color="bg-purple-600" />
+        
+        {/* Grid de CPU / Memória */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <StatCard 
+            title="Uso de CPU" 
+            value={res.egeon_cpu} 
+            isPercentage 
+            color="text-purple-600"
+          >
+            <div className="w-[180px] h-[125px] flex items-center justify-center overflow-hidden -mr-2">
               <CustomGauge value={Number(res.egeon_cpu || 0)} />
             </div>
           </StatCard>
 
-          <StatCard title="USO MEMÓRIA" value={res.egeon_mem} isPercentage color="text-purple-600">
-            <div className="w-[180px] h-[120px] -mr-4">
+          <StatCard 
+            title="Uso de Memória" 
+            value={res.egeon_mem} 
+            isPercentage 
+            color="text-purple-600"
+          >
+            <div className="w-[180px] h-[125px] flex items-center justify-center overflow-hidden -mr-2">
               <CustomGauge value={Number(res.egeon_mem || 0)} />
             </div>
           </StatCard>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8 items-center">
-          <StatCard title="Jobs Executando" value={res.egeon_running} color="text-emerald-600" />
-          <StatCard title="Jobs em Fila" value={res.egeon_queued} color="text-orange-500" />
-          <StatCard title="Nodes Totais" value={res.egeon_nodes_total} color="text-blue-600" />
 
-          <StatCard title="Nodes Disponiveis" value={res.egeon_nodes_free} color="text-emerald-600" />
-          <StatCard title="Nodes Ocupados" value={res.egeon_nodes_busy} color="text-orange-600" />
-          <StatCard title="Nodes Indisponiveis" value={res.egeon_nodes_down} color="text-red-600" />
+        {/* Grid de Métricas Secundárias / Nodes */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <BadgeCard title="Jobs Executando" value={res.egeon_running} status="success" />
+          <BadgeCard title="Jobs em Fila" value={res.egeon_queued} status="warning" />
+          <BadgeCard title="Nodes Totais" value={res.egeon_nodes_total} status="neutral" />
+          <BadgeCard title="Nodes Livres" value={res.egeon_nodes_free} status="success" />
+          <BadgeCard title="Nodes Ocupados" value={res.egeon_nodes_busy} status="info" />
+          <BadgeCard title="Nodes Inativos" value={res.egeon_nodes_down} status="danger" />
         </div>
-        <QueueTable title="Partições Slurm (Egeon)" queues={res.egeon_queues} color="border-purple-100" />
+
+        {/* Filas */}
+        <QueueTable title="Partições Slurm (Egeon)" queues={res.egeon_queues} color="border-purple-100/50" />
       </section>
     </main>
   );
 }
 
-// COMPONENTES AUXILIARES
+// COMPONENTES AUXILIARES INTERNOS
 
 function HeaderSection({ icon, title, color }: any) {
   return (
-    <div className="flex items-center gap-4 mb-8">
-      <div className={`p-3 ${color} text-white rounded-2xl shadow-lg`}>{icon}</div>
-      <h2 className="text-2xl font-black text-yellow-200 uppercase tracking-tighter">{title}</h2>
+    <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
+      <div className={`p-2.5 ${color} text-white rounded-xl shadow-md shadow-slate-900/5`}>
+        {icon}
+      </div>
+      <h2 className="text-xl font-bold text-slate-800 tracking-tight">{title}</h2>
     </div>
   );
 }
 
-// function StatCard({ title, value, color, isPercentage }: any) {
-//   const numericValue = typeof value === 'string' ? parseFloat(value) : value;
-//   const isCritical = title === "Uso CPU" && numericValue > 90;
-
-//   return (
-//     <div className={`p-7 rounded-3xl border transition-all group shadow-sm hover:shadow-xl ${
-//       isCritical ? 'bg-red-50 border-red-200 animate-pulse' : 'bg-white border-gray-100'
-//     }`}>
-//       <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 ${
-//         isCritical ? 'text-red-600' : 'text-gray-800 group-hover:text-blue-500'
-//       }`}>
-//         {title} {isCritical && "⚠️ CRÍTICO"}
-//       </p>
-//       <p className={`text-5xl font-black tracking-tighter ${isCritical ? 'text-red-700' : color}`}>
-//         {Math.round(numericValue)}{isPercentage ? '%' : ''}
-//       </p>
-//     </div>
-//   );
-// }
-
 function StatCard({ title, value, color, isPercentage, children }: any) {
   const numericValue = typeof value === 'string' ? parseFloat(value) : Number(value || 0);
-  
-  // Criamos uma variável para o texto formatado que será exibido
   const displayValue = isPercentage ? numericValue.toFixed(1) : numericValue;
-  
   const isCritical = title.toUpperCase().includes("CPU") && numericValue > 90;
 
   return (
-    <div className={`p-7 rounded-3xl border transition-all group shadow-sm hover:shadow-xl flex items-center justify-between overflow-hidden ${
-      isCritical ? 'bg-red-50 border-red-200 animate-pulse' : 'bg-white border-gray-100'
+    <div className={`p-6 rounded-2xl border transition-all duration-300 flex items-center justify-between overflow-hidden shadow-sm hover:shadow-md ${
+      isCritical 
+        ? 'bg-red-50/60 border-red-200' 
+        : 'bg-slate-50/50 border-slate-200/80 hover:bg-slate-50'
     }`}>
-      <div className="z-10">
-        <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 ${
-          isCritical ? 'text-red-600' : 'text-gray-400 group-hover:text-blue-500'
+      <div className="space-y-1.5">
+        <p className={`text-[10px] font-bold uppercase tracking-[0.15em] ${
+          isCritical ? 'text-red-600' : 'text-slate-400'
         }`}>
           {title} {isCritical && "⚠️ CRÍTICO"}
         </p>
-        <p className={`text-4xl font-black tracking-tighter ${isCritical ? 'text-red-700' : color}`}>
-          {/* AQUI: Adicionamos o % explicitamente no final do valor formatado */}
+        <p className={`text-4xl font-extrabold tracking-tighter ${isCritical ? 'text-red-700' : 'text-slate-800'}`}>
           {displayValue}{isPercentage ? '%' : ''}
         </p>
       </div>
@@ -210,19 +221,40 @@ function StatCard({ title, value, color, isPercentage, children }: any) {
   );
 }
 
+function BadgeCard({ title, value, status }: { title: string; value: any; status: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }) {
+  const statusConfig = {
+    success: { bg: 'bg-emerald-50/60', border: 'border-emerald-200', text: 'text-emerald-700', valText: 'text-emerald-800' },
+    warning: { bg: 'bg-amber-50/60', border: 'border-amber-200', text: 'text-amber-700', valText: 'text-amber-800' },
+    danger: { bg: 'bg-rose-50/60', border: 'border-rose-200', text: 'text-rose-700', valText: 'text-rose-800' },
+    info: { bg: 'bg-sky-50/60', border: 'border-sky-200', text: 'text-sky-700', valText: 'text-sky-800' },
+    neutral: { bg: 'bg-slate-50/70', border: 'border-slate-200', text: 'text-slate-500', valText: 'text-slate-800' },
+  };
+
+  const current = statusConfig[status];
+
+  return (
+    <div className={`p-4 rounded-2xl border ${current.bg} ${current.border} hover:scale-[1.02] transition-transform duration-200 flex flex-col justify-between h-24 shadow-sm`}>
+      <span className={`text-[10px] font-bold uppercase tracking-wider ${current.text}`}>{title}</span>
+      <span className={`text-2xl font-black ${current.valText}`}>{value ?? 0}</span>
+    </div>
+  );
+}
+
 function QueueTable({ title, queues, color }: any) {
   if (!queues || queues.length === 0) return null;
+  
   return (
-    <div className={`bg-white rounded-3xl border-2 ${color} overflow-hidden shadow-sm`}>
-      <div className="px-6 py-4 bg-gray-50/50 border-b flex items-center gap-2">
-        <ListOrdered size={16} className="text-gray-400" />
-        <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">{title}</h3>
+    <div className={`bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm`}>
+      <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+        <ListOrdered size={14} className="text-slate-400" />
+        <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{title}</h3>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-px bg-gray-100">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-px bg-slate-200">
         {queues.map((q: any) => (
-          <div key={q.name} className="bg-white p-5 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors">
-            <span className="text-[10px] font-bold text-gray-700 uppercase mb-1">{q.name}</span>
-            <span className="text-2xl font-black text-gray-800">{q.value}</span>
+          <div key={q.name} className="bg-white p-4.5 flex flex-col items-center justify-center hover:bg-slate-50/80 transition-colors group relative">
+            <span className="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-tight group-hover:text-blue-600 transition-colors">{q.name}</span>
+            <span className="text-xl font-extrabold text-slate-700">{q.value}</span>
+            <ArrowUpRight size={10} className="absolute top-2 right-2 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         ))}
       </div>
