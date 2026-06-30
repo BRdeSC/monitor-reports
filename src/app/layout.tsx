@@ -7,8 +7,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR">
       <body className="bg-slate-50 text-slate-900 min-h-screen flex">
         <Navigation />
-        <main className="flex-1 min-h-screen p-8 overflow-y-auto">
-          <div className="max-w-7xl mx-auto w-full">
+        <main className="flex-1 min-h-screen p-6 md:p-8 overflow-y-auto">
+          <div className="w-full mx-auto">
             {children}
           </div>
         </main>

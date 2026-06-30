@@ -10,7 +10,13 @@ export async function GET(request: NextRequest) {
   let days = 30;
   let step = '1h';
 
-  if (range === '60d') {
+  if (range === '1d') {
+    days = 1;
+    step = '15m';
+  } else if (range === '7d') {
+    days = 7;
+    step = '30m';
+  } else if (range === '60d') {
     days = 60;
     step = '2h';
   } else if (range === '90d') {

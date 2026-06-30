@@ -3,9 +3,11 @@ import ReactSpeedometer from "react-d3-speedometer"
 
 interface Props {
   value: number;
+  width?: number;
+  height?: number;
 }
 
-export default function CustomGauge({ value }: Props) {
+export default function CustomGauge({ value, width = 200, height = 130 }: Props) {
   // Garantimos que o valor seja um número entre 0 e 100
   const cleanValue = Math.min(Math.max(Number(value) || 0, 0), 100);
 
@@ -32,8 +34,8 @@ export default function CustomGauge({ value }: Props) {
         labelFontSize="0"  // Esconde os números da escala nas pontas (0 e 100) para não poluir
         
         // Dimensões
-        width={200}
-        height={130}
+        width={width}
+        height={height}
         
         // Animação suave
         needleTransitionDuration={2000}
