@@ -14,7 +14,7 @@ export default function PerformancePage() {
   const fetchData = useCallback(async (manual = false) => {
     if (manual) setIsRefreshing(true);
     try {
-      const response = await fetch('/api/metrics/performance');
+      const response = await fetch('/metrics/api/metrics/performance');
       const json = await response.json();
       if (json.success) {
         setRes(json.data);

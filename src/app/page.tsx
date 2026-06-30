@@ -17,7 +17,7 @@ export default function MetricsPage() {
   const fetchMetricsList = async () => {
     setLoadingMetrics(true);
     try {
-      const response = await fetch('/api/metrics/list');
+      const response = await fetch('/metrics/api/metrics/list');
       const result = await response.json();
       if (result.status === 'success') {
         const sorted = (result.data as string[]).sort();
@@ -38,7 +38,7 @@ export default function MetricsPage() {
     else setLoading(true);
 
     try {
-      const url = `/api/metrics/instant?query=${encodeURIComponent(targetQuery)}`;
+      const url = `/metrics/api/metrics/instant?query=${encodeURIComponent(targetQuery)}`;
       const response = await fetch(url);
       const result = await response.json();
       setData(result);

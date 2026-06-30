@@ -44,7 +44,7 @@ export default function ReportsPage() {
   const fetchReportData = async (selectedRange: string) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/reports?range=${selectedRange}`);
+      const response = await fetch(`/metrics/api/reports?range=${selectedRange}`);
       const json = await response.json();
       if (json.success) {
         setData(json.data);
@@ -153,7 +153,7 @@ export default function ReportsPage() {
     }
 
     try {
-      const response = await fetch('/api/reports/export', {
+      const response = await fetch('/metrics/api/reports/export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
