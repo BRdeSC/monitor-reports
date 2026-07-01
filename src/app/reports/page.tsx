@@ -14,7 +14,7 @@ interface HostReport {
 export default function ReportsPage() {
   const [data, setData] = useState<HostReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState('30d');
+  const [range, setRange] = useState('7d');
   const [environment, setEnvironment] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
