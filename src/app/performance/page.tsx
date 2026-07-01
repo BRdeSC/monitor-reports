@@ -8,7 +8,7 @@ export default function PerformancePage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>('');
-  const [layoutMode, setLayoutMode] = useState<'grid' | 'stack'>('grid');
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'stack'>('stack');
 
   // Função para buscar dados
   const fetchData = useCallback(async (manual = false) => {
