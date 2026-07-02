@@ -24,7 +24,7 @@ export default function Navigation() {
     { name: 'Métricas Gerais', href: '/', icon: Activity },
     { name: 'Dashboards', href: '/dashboards', icon: BarChart3 },
     { name: 'Servidores', href: '/servidores', icon: Server },
-    { name: 'Uso Usuários', href: '/usuarios', icon: Users },
+    { name: 'Usuários', href: '/usuarios', icon: Users },
   ];
 
   return (

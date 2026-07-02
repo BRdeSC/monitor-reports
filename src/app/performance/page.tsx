@@ -60,7 +60,7 @@ export default function PerformancePage() {
       {/* CABEÇALHO DA PÁGINA */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6 w-full">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Status do Ambiente</h1>
+          <h1 className="text-3xl font-black text-slate-400 tracking-tighter uppercase">Status do Ambiente</h1>
           <div className="flex items-center gap-2 mt-1.5">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
