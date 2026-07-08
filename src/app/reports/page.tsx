@@ -21,6 +21,8 @@ export default function ReportsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [extractionTimestamp, setExtractionTimestamp] = useState<string>('');
+  const [collectionStartDate, setCollectionStartDate] = useState<string>('');
+  const [collectionEndDate, setCollectionEndDate] = useState<string>('');
   const itemsPerPage = 10;
 
   // Sorting state (default is sorted by hostname A-Z)
@@ -55,6 +57,8 @@ export default function ReportsPage() {
         } else {
           setExtractionTimestamp(formatExtractionTimestamp(new Date()));
         }
+        setCollectionStartDate(json.startDate || '');
+        setCollectionEndDate(json.endDate || '');
       } else {
         console.error("Erro no retorno da API:", json.error);
         setData([]);
@@ -171,7 +175,9 @@ export default function ReportsPage() {
         scope,
         sortField: sortColumn,
         sortDirection,
-        timestamp: clickTimestamp
+        timestamp: clickTimestamp,
+        startDate: collectionStartDate,
+        endDate: collectionEndDate
       });
       window.open(`/metrics/api/reports/export?${params.toString()}`, '_blank');
       return;
@@ -192,7 +198,9 @@ export default function ReportsPage() {
           scope,
           sortField: sortColumn,
           sortDirection,
-          timestamp: clickTimestamp
+          timestamp: clickTimestamp,
+          startDate: collectionStartDate,
+          endDate: collectionEndDate
         }),
       });
 
@@ -390,10 +398,18 @@ export default function ReportsPage() {
       <section className="min-h-[400px] w-full">
         {/* BANNER DE STATUS DE AUDITORIA */}
         {!loading && sortedData.length > 0 && (
-          <div className="flex flex-col sm:flex-row justify-between items-center bg-slate-100 border border-slate-200 px-4 py-2.5 rounded-xl text-[10px] uppercase font-black text-slate-500 tracking-wider mb-4 gap-2 shadow-sm">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-              <span>Ordenado por: {getSortDescription(sortColumn, sortDirection)}</span>
+          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-slate-100 border border-slate-200 px-4 py-2.5 rounded-xl text-[10px] uppercase font-black text-slate-500 tracking-wider mb-4 gap-2 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                <span>ORDENADO POR: {getSortDescription(sortColumn, sortDirection)}</span>
+              </div>
+              {collectionStartDate && collectionEndDate && (
+                <span className="hidden sm:inline text-slate-300">|</span>
+              )}
+              {collectionStartDate && collectionEndDate && (
+                <span>PERÍODO DE COLETA: de {collectionStartDate} às 00:00 até {collectionEndDate} às 00:00</span>
+              )}
             </div>
             <div>
               <span>Gerado em: {extractionTimestamp || 'Carregando...'}</span>

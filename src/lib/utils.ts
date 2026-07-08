@@ -111,3 +111,13 @@ export function sortReportData(
     }
   });
 }
+
+export function formatDateDDMMYYYY(dateInput: Date | string | number): string {
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return '';
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const d = pad(date.getDate());
+  const m = pad(date.getMonth() + 1);
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
+}

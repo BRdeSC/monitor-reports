@@ -42,7 +42,7 @@ export async function queryPrometheusRange(promql: string, start: string, end: s
   }
 }
 
-export async function getConsolidatedMetrics(range: string): Promise<{ data: HostReport[], timestamp: Date }> {
+export async function getConsolidatedMetrics(range: string): Promise<{ data: HostReport[], timestamp: Date, startDate: Date, endDate: Date }> {
   let days = 30;
   let step = '1h';
 
@@ -61,7 +61,10 @@ export async function getConsolidatedMetrics(range: string): Promise<{ data: Hos
   }
 
   const endDate = new Date();
+  endDate.setHours(0, 0, 0, 0);
+
   const startDate = subDays(endDate, days);
+  startDate.setHours(0, 0, 0, 0);
 
   const start = formatISO(startDate);
   const end = formatISO(endDate);
@@ -180,6 +183,8 @@ export async function getConsolidatedMetrics(range: string): Promise<{ data: Hos
 
   return {
     data: consolidated,
-    timestamp: endDate
+    timestamp: new Date(),
+    startDate,
+    endDate
   };
 }

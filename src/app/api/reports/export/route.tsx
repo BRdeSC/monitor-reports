@@ -7,7 +7,8 @@ import {
   formatExtractionTimestamp, 
   filterReportData, 
   sortReportData, 
-  HostReport 
+  HostReport,
+  formatDateDDMMYYYY
 } from '@/lib/utils';
 import { getConsolidatedMetrics } from '@/lib/prometheus';
 
@@ -152,7 +153,9 @@ const MyPDFDocument = ({
   scope,
   sortField,
   sortDirection,
-  timestamp
+  timestamp,
+  startDate,
+  endDate
 }: { 
   items: HostReport[], 
   range: string, 
@@ -161,7 +164,9 @@ const MyPDFDocument = ({
   scope: string,
   sortField?: 'nodename' | 'cpu' | 'mem' | 'network' | 'hostname',
   sortDirection?: 'asc' | 'desc',
-  timestamp?: string
+  timestamp?: string,
+  startDate?: string,
+  endDate?: string
 }) => {
   const envLabel = environment === 'all' 
     ? 'TODOS' 
@@ -208,7 +213,9 @@ const MyPDFDocument = ({
             </View>
             <View style={pdfStyles.auditRow}>
               <Text style={pdfStyles.auditLabel}>
-                Período: <Text style={pdfStyles.auditValue}>{range === '1d' ? 'Último 1 dia (24h)' : range === '7d' ? 'Última 1 semana (7d)' : `Últimos ${range.replace('d', '')} dias`}</Text>
+                Período de Coleta: <Text style={pdfStyles.auditValue}>
+                  {startDate && endDate ? `de ${startDate} às 00:00 até ${endDate} às 00:00` : (range === '1d' ? 'Último 1 dia (24h)' : range === '7d' ? 'Última 1 semana (7d)' : `Últimos ${range.replace('d', '')} dias`)}
+                </Text>
               </Text>
               {timestamp && (
                 <Text style={pdfStyles.auditLabel}>
@@ -269,7 +276,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 1. Busca dados consolidados do Prometheus
-    const { data: rawData, timestamp: extractedAt } = await getConsolidatedMetrics(range);
+    const { data: rawData, timestamp: extractedAt, startDate, endDate } = await getConsolidatedMetrics(range);
 
     // 2. Aplica filtragem (ambiente e hostname)
     const filtered = filterReportData(rawData, environment, searchQuery);
@@ -284,6 +291,9 @@ export async function GET(request: NextRequest) {
       ? timestampParam
       : formatExtractionTimestamp(timestampParam || extractedAt);
 
+    const startDateParam = searchParams.get('startDate') || formatDateDDMMYYYY(startDate);
+    const endDateParam = searchParams.get('endDate') || formatDateDDMMYYYY(endDate);
+
     // 5. Gera o stream do PDF
     const stream = await pdf(
       <MyPDFDocument 
@@ -295,6 +305,8 @@ export async function GET(request: NextRequest) {
         sortField={sortField}
         sortDirection={sortDirection}
         timestamp={formattedTimestamp}
+        startDate={startDateParam}
+        endDate={endDateParam}
       />
     ).toBuffer();
 
@@ -323,7 +335,9 @@ export async function POST(request: NextRequest) {
       scope = 'all',
       sortField = 'nodename',
       sortDirection = 'asc',
-      timestamp
+      timestamp,
+      startDate,
+      endDate
     } = body;
 
     if (!items || !format) {
@@ -341,6 +355,15 @@ export async function POST(request: NextRequest) {
       ? timestamp
       : formatExtractionTimestamp(timestamp || new Date());
 
+    let useStartDate = startDate;
+    let useEndDate = endDate;
+
+    if (!useStartDate || !useEndDate) {
+      const { startDate: calcStart, endDate: calcEnd } = await getConsolidatedMetrics(range);
+      useStartDate = useStartDate || formatDateDDMMYYYY(calcStart);
+      useEndDate = useEndDate || formatDateDDMMYYYY(calcEnd);
+    }
+
     if (format === 'pdf') {
       const stream = await pdf(
         <MyPDFDocument 
@@ -352,6 +375,8 @@ export async function POST(request: NextRequest) {
           sortField={sortField}
           sortDirection={sortDirection}
           timestamp={formattedTimestamp}
+          startDate={useStartDate}
+          endDate={useEndDate}
         />
       ).toBuffer();
       return new NextResponse(stream as any, {
