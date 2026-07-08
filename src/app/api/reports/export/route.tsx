@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import React from 'react';
-
-interface HostReport {
-  instance: string;
-  nodename: string;
-  cpu: number;
-  mem: number;
-  network: number;
-}
+import { 
+  getSortDescription, 
+  formatExtractionTimestamp, 
+  filterReportData, 
+  sortReportData, 
+  HostReport 
+} from '@/lib/utils';
+import { getConsolidatedMetrics } from '@/lib/prometheus';
 
 // PDF Styles
 const pdfStyles = StyleSheet.create({
@@ -47,6 +47,35 @@ const pdfStyles = StyleSheet.create({
     marginBottom: 2,
   },
   metaValue: {
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  auditBlock: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 15,
+  },
+  auditTitle: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#475569',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  auditRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  auditLabel: {
+    fontSize: 7.5,
+    color: '#64748b',
+  },
+  auditValue: {
     fontWeight: 'bold',
     color: '#0f172a',
   },
@@ -115,7 +144,25 @@ const pdfStyles = StyleSheet.create({
   }
 });
 
-const MyPDFDocument = ({ items, range, environment, searchQuery, scope }: { items: HostReport[], range: string, environment: string, searchQuery: string, scope: string }) => {
+const MyPDFDocument = ({ 
+  items, 
+  range, 
+  environment, 
+  searchQuery, 
+  scope,
+  sortField,
+  sortDirection,
+  timestamp
+}: { 
+  items: HostReport[], 
+  range: string, 
+  environment: string, 
+  searchQuery: string, 
+  scope: string,
+  sortField?: 'nodename' | 'cpu' | 'mem' | 'network' | 'hostname',
+  sortDirection?: 'asc' | 'desc',
+  timestamp?: string
+}) => {
   const envLabel = environment === 'all' 
     ? 'TODOS' 
     : environment === 'coids' 
@@ -135,13 +182,42 @@ const MyPDFDocument = ({ items, range, environment, searchQuery, scope }: { item
             <Text style={pdfStyles.title}>MONITOR REPORTS</Text>
             <Text style={pdfStyles.subtitle}>{reportSubtitle}</Text>
           </View>
-          <View style={pdfStyles.meta}>
+          {/* <View style={pdfStyles.meta}>
             <Text style={pdfStyles.metaText}>Período: <Text style={pdfStyles.metaValue}>{range === '1d' ? 'Último 1 dia (24h)' : range === '7d' ? 'Última 1 semana (7d)' : `Últimos ${range.replace('d', '')} dias`}</Text></Text>
             <Text style={pdfStyles.metaText}>Ambiente: <Text style={pdfStyles.metaValue}>{envLabel}</Text></Text>
             {searchQuery && <Text style={pdfStyles.metaText}>Busca: <Text style={pdfStyles.metaValue}>"{searchQuery}"</Text></Text>}
             <Text style={pdfStyles.metaText}>Total de Hosts: <Text style={pdfStyles.metaValue}>{items.length}</Text></Text>
-          </View>
+          </View> */}
         </View>
+
+        {/* Bloco Estruturado de Metadados / Auditoria */}
+        {sortField && sortDirection && (
+          <View style={pdfStyles.auditBlock}>
+            <Text style={pdfStyles.auditTitle}>Informações das métricas para Extração dos dados</Text>
+            <View style={pdfStyles.auditRow}>
+              <Text style={pdfStyles.auditLabel}>
+                Ambiente: <Text style={pdfStyles.auditValue}>{envLabel}</Text>
+              </Text>
+              <Text style={pdfStyles.metaText}>
+                Total de Hosts: <Text style={pdfStyles.metaValue}>{items.length}</Text>
+              </Text>
+              <Text style={pdfStyles.auditLabel}>
+                Critério de Ordenação: <Text style={pdfStyles.auditValue}>{getSortDescription(sortField, sortDirection)}</Text>
+              </Text>
+              
+            </View>
+            <View style={pdfStyles.auditRow}>
+              <Text style={pdfStyles.auditLabel}>
+                Período: <Text style={pdfStyles.auditValue}>{range === '1d' ? 'Último 1 dia (24h)' : range === '7d' ? 'Última 1 semana (7d)' : `Últimos ${range.replace('d', '')} dias`}</Text>
+              </Text>
+              {timestamp && (
+                <Text style={pdfStyles.auditLabel}>
+                  Extraído em: <Text style={pdfStyles.auditValue}>{timestamp}</Text>
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Table */}
         <View style={pdfStyles.table}>
@@ -176,17 +252,108 @@ const MyPDFDocument = ({ items, range, environment, searchQuery, scope }: { item
   );
 };
 
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const format = searchParams.get('format') || 'pdf';
+    const range = searchParams.get('range') || '30d';
+    const environment = searchParams.get('environment') || 'all';
+    const searchQuery = searchParams.get('searchQuery') || '';
+    const scope = searchParams.get('scope') || 'all';
+    const sortField = (searchParams.get('sortField') as any) || 'nodename';
+    const sortDirection = (searchParams.get('sortDirection') as any) || 'asc';
+    const timestampParam = searchParams.get('timestamp') || '';
+
+    if (format !== 'pdf') {
+      return NextResponse.json({ success: false, error: 'Apenas formato PDF é suportado via GET' }, { status: 400 });
+    }
+
+    // 1. Busca dados consolidados do Prometheus
+    const { data: rawData, timestamp: extractedAt } = await getConsolidatedMetrics(range);
+
+    // 2. Aplica filtragem (ambiente e hostname)
+    const filtered = filterReportData(rawData, environment, searchQuery);
+
+    // 3. Aplica ordenação
+    const sorted = sortReportData(filtered, sortField, sortDirection);
+
+    // 4. Aplica escopo (all ou top10)
+    const items = scope === 'top10' ? sorted.slice(0, 10) : sorted;
+
+    const formattedTimestamp = (timestampParam && timestampParam.includes(' às '))
+      ? timestampParam
+      : formatExtractionTimestamp(timestampParam || extractedAt);
+
+    // 5. Gera o stream do PDF
+    const stream = await pdf(
+      <MyPDFDocument 
+        items={items} 
+        range={range} 
+        environment={environment} 
+        searchQuery={searchQuery} 
+        scope={scope}
+        sortField={sortField}
+        sortDirection={sortDirection}
+        timestamp={formattedTimestamp}
+      />
+    ).toBuffer();
+
+    return new NextResponse(stream as any, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="relatorio_utilizacao.pdf"`,
+      },
+    });
+
+  } catch (error: any) {
+    console.error('Erro na exportação do relatório via GET:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { items, format, range = '30d', environment = 'all', searchQuery = '', scope = 'all' } = body;
+    const { 
+      items, 
+      format, 
+      range = '30d', 
+      environment = 'all', 
+      searchQuery = '', 
+      scope = 'all',
+      sortField = 'nodename',
+      sortDirection = 'asc',
+      timestamp
+    } = body;
 
     if (!items || !format) {
       return NextResponse.json({ success: false, error: 'Parâmetros inválidos' }, { status: 400 });
     }
 
+    const envLabel = environment === 'all' 
+      ? 'TODOS' 
+      : environment === 'coids' 
+        ? 'DATA CENTER COIDS' 
+        : 'DATA CENTER SESUP';
+
+    const sortDesc = getSortDescription(sortField, sortDirection);
+    const formattedTimestamp = (timestamp && typeof timestamp === 'string' && timestamp.includes(' às '))
+      ? timestamp
+      : formatExtractionTimestamp(timestamp || new Date());
+
     if (format === 'pdf') {
-      const stream = await pdf(<MyPDFDocument items={items} range={range} environment={environment} searchQuery={searchQuery} scope={scope} />).toBuffer();
+      const stream = await pdf(
+        <MyPDFDocument 
+          items={items} 
+          range={range} 
+          environment={environment} 
+          searchQuery={searchQuery} 
+          scope={scope}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          timestamp={formattedTimestamp}
+        />
+      ).toBuffer();
       return new NextResponse(stream as any, {
         headers: {
           'Content-Type': 'application/pdf',
@@ -196,6 +363,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (format === 'xlsx') {
+      const envLabelShort = environment === 'all' 
+        ? 'TODOS' 
+        : environment === 'coids' 
+          ? 'COIDS' 
+          : 'SESUP';
+
+      const title = `RELATÓRIO DE UTILIZAÇÃO MÉDIA DE HOSTS - ${envLabelShort}`;
+      const criterion = `Critério de Ordenação: ${sortDesc}`;
+      const extraction = `Extraído em: ${formattedTimestamp}`;
+
       const headers = ['Hostname', 'Instância (Prometheus)', 'CPU Média (%)', 'Memória Média (%)', 'Tráfego Rede Médio (MB/s)'];
       const rows = items.map((item: any) => [
         item.nodename.toUpperCase(),
@@ -205,8 +382,34 @@ export async function POST(request: NextRequest) {
         Number(item.network.toFixed(2))
       ]);
 
-      const wsData = [headers, ...rows];
+      const wsData = [
+        [title],
+        [criterion],
+        [extraction],
+        [], // Linha 4 em branco
+        headers, // Linha 5
+        ...rows // Linhas 6+
+      ];
+
       const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      // Estilos de metadados
+      const metaStyle = {
+        font: { italic: true, sz: 10, color: { rgb: "7F8C8D" } }
+      };
+      if (ws['A1']) ws['A1'].s = metaStyle;
+      if (ws['A2']) ws['A2'].s = metaStyle;
+      if (ws['A3']) ws['A3'].s = metaStyle;
+
+      // Estilos do header da tabela
+      const headerStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "334155" } } // Slate background
+      };
+      ['A5', 'B5', 'C5', 'D5', 'E5'].forEach(cell => {
+        if (ws[cell]) ws[cell].s = headerStyle;
+      });
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Métricas');
 
@@ -220,6 +423,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (format === 'csv') {
+      const metadataLines = [
+        `# RELATÓRIO DE UTILIZAÇÃO MÉDIA DE HOSTS - ${envLabel}`,
+        `# CRITÉRIO: ${sortDesc}`,
+        `# DATA EXTRAÇÃO: ${formattedTimestamp}`,
+        '' // Linha em branco
+      ];
+
       const headers = ['Hostname', 'Instancia (Prometheus)', 'Média CPU (%)', 'Média Memória (%)', 'Tráfego Rede Médio (MB/s)'];
       const rows = items.map((item: any) => [
         item.nodename.toUpperCase(),
@@ -230,6 +440,7 @@ export async function POST(request: NextRequest) {
       ]);
 
       const csvContent = [
+        ...metadataLines,
         headers.join(','),
         ...rows.map((row: string[]) => row.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
       ].join('\n');

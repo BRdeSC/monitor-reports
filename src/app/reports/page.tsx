@@ -2,6 +2,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react';
 import { Loader2, FileDown, Calendar, Server, ChevronLeft, ChevronRight, BarChart2, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { getSortDescription, formatExtractionTimestamp } from '@/lib/utils';
 
 interface HostReport {
   instance: string;
@@ -19,6 +20,7 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [extractionTimestamp, setExtractionTimestamp] = useState<string>('');
   const itemsPerPage = 10;
 
   // Sorting state (default is sorted by hostname A-Z)
@@ -48,6 +50,11 @@ export default function ReportsPage() {
       const json = await response.json();
       if (json.success) {
         setData(json.data);
+        if (json.timestamp) {
+          setExtractionTimestamp(formatExtractionTimestamp(json.timestamp));
+        } else {
+          setExtractionTimestamp(formatExtractionTimestamp(new Date()));
+        }
       } else {
         console.error("Erro no retorno da API:", json.error);
         setData([]);
@@ -152,6 +159,24 @@ export default function ReportsPage() {
       return;
     }
 
+    // Capture dynamic timestamp at click time
+    const clickTimestamp = formatExtractionTimestamp(new Date());
+
+    if (format === 'pdf') {
+      const params = new URLSearchParams({
+        format: 'pdf',
+        range,
+        environment,
+        searchQuery,
+        scope,
+        sortField: sortColumn,
+        sortDirection,
+        timestamp: clickTimestamp
+      });
+      window.open(`/metrics/api/reports/export?${params.toString()}`, '_blank');
+      return;
+    }
+
     try {
       const response = await fetch('/metrics/api/reports/export', {
         method: 'POST',
@@ -164,7 +189,10 @@ export default function ReportsPage() {
           range,
           environment,
           searchQuery,
-          scope
+          scope,
+          sortField: sortColumn,
+          sortDirection,
+          timestamp: clickTimestamp
         }),
       });
 
@@ -360,6 +388,19 @@ export default function ReportsPage() {
 
       {/* TABELA DE DADOS */}
       <section className="min-h-[400px] w-full">
+        {/* BANNER DE STATUS DE AUDITORIA */}
+        {!loading && sortedData.length > 0 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center bg-slate-100 border border-slate-200 px-4 py-2.5 rounded-xl text-[10px] uppercase font-black text-slate-500 tracking-wider mb-4 gap-2 shadow-sm">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+              <span>Ordenado por: {getSortDescription(sortColumn, sortDirection)}</span>
+            </div>
+            <div>
+              <span>Gerado em: {extractionTimestamp || 'Carregando...'}</span>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex flex-col justify-center items-center py-32 space-y-4 bg-white rounded-3xl border border-slate-200/80 shadow-sm w-full">
             <Loader2 className="animate-spin text-blue-600" size={40} />
