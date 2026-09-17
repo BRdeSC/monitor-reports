@@ -21,6 +21,7 @@ export default function Navigation() {
   const navItems = [
     { name: 'Status do Ambiente', href: '/performance', icon: LayoutDashboard },
     { name: 'Relatório de Utilização', href: '/reports', icon: FileSpreadsheet },
+    { name: 'Relatório Mensal', href: '/relatorio-mensal', icon: FileSpreadsheet },
     { name: 'Métricas Gerais', href: '/', icon: Activity },
     { name: 'Dashboards', href: '/dashboards', icon: BarChart3 },
     { name: 'Servidores', href: '/servidores', icon: Server },

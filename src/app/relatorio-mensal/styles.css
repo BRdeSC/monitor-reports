@@ -1,0 +1,360 @@
+:root {
+  --azul: #1a73e8;
+  --verde: #34a853;
+  --vermelho: #ea4335;
+  --amarelo: #fbbc04;
+  --roxo: #9c27b0;
+  --cinza: #5f6368;
+  --fundo: #f8f9fa;
+  --card: #ffffff;
+}
+
+.relatorio-mensal {
+  font-family: 'Inter', sans-serif;
+  background: var(--fundo);
+  color: #202124;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.relatorio-mensal header {
+  background: linear-gradient(135deg, #1a3a5c 0%, #1a73e8 100%);
+  color: white;
+  padding: 3rem 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.relatorio-mensal header h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.relatorio-mensal header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.relatorio-mensal .header-controls {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.relatorio-mensal .header-controls select,
+.relatorio-mensal .header-controls button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  outline: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.relatorio-mensal .header-controls select option {
+  color: #202124;
+}
+
+.relatorio-mensal .header-controls select:hover,
+.relatorio-mensal .header-controls button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.relatorio-mensal .nav-links {
+  background: var(--card);
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-wrap: wrap;
+}
+
+.relatorio-mensal .nav-links a {
+  color: #1a3a5c;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.relatorio-mensal .nav-links a:hover {
+  color: var(--azul);
+}
+
+.relatorio-mensal .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.relatorio-mensal .intro {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 2rem 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.relatorio-mensal .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.2rem;
+  margin: 2rem 0;
+}
+
+.relatorio-mensal .kpi-card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border-top: 4px solid var(--azul);
+  transition: transform 0.2s;
+}
+
+.relatorio-mensal .kpi-card:hover {
+  transform: translateY(-4px);
+}
+
+.relatorio-mensal .kpi-card h3 {
+  font-size: 0.9rem;
+  color: var(--cinza);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.relatorio-mensal .kpi-card .valor {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a3a5c;
+}
+
+.relatorio-mensal .kpi-card .sub {
+  font-size: 0.85rem;
+  color: var(--cinza);
+  margin-top: 0.3rem;
+}
+
+.relatorio-mensal .secao {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 2rem 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  scroll-margin-top: 80px;
+}
+
+.relatorio-mensal .secao h2 {
+  font-size: 1.5rem;
+  color: #1a3a5c;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e8eaed;
+}
+
+.relatorio-mensal .texto-interpretativo {
+  background: #e8f4fd;
+  border-left: 4px solid var(--azul);
+  padding: 1.2rem 1.5rem;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  font-size: 0.98rem;
+  color: #1a3a5c;
+  text-align: justify;
+}
+
+.relatorio-mensal .texto-interpretativo.erro {
+  background: #fef7e0;
+  border-left: 4px solid var(--amarelo);
+  color: #5d4e37;
+  text-align: justify;
+}
+
+.relatorio-mensal .texto-interpretativo.destaque {
+  background: #fce4ec;
+  border-left: 4px solid #e91e63;
+  color: #5d2337;
+  text-align: justify;
+}
+
+.relatorio-mensal .texto-interpretativo.energia {
+  background: #fff3e0;
+  border-left: 4px solid #ff6d00;
+  color: #4e342e;
+  text-align: justify;
+}
+
+.relatorio-mensal .texto-interpretativo.disco {
+  background: #e8f5e9;
+  border-left: 4px solid var(--verde);
+  color: #1b5e20;
+  text-align: justify;
+}
+
+.relatorio-mensal .grafico {
+  width: 100%;
+  height: 450px;
+  margin: 1.5rem 0;
+}
+
+.relatorio-mensal .grafico-grande {
+  height: 520px;
+}
+
+.relatorio-mensal .grafico-muito-grande {
+  height: 600px;
+}
+
+.relatorio-mensal table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.95rem;
+}
+
+.relatorio-mensal th, .relatorio-mensal td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.relatorio-mensal th {
+  background: #f1f3f4;
+  font-weight: 600;
+  color: #1a3a5c;
+}
+
+.relatorio-mensal tr:hover {
+  background: #f8f9fa;
+}
+
+.relatorio-mensal .badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+}
+
+.relatorio-mensal footer {
+  text-align: center;
+  padding: 2rem;
+  color: var(--cinza);
+  font-size: 0.85rem;
+}
+
+.btn-pdf-topo {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: rgba(255,255,255,0.95);
+  color: #1a3a5c;
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1.1rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 10;
+}
+.btn-pdf-topo:hover {
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+.btn-pdf-topo svg { width: 18px; height: 18px; }
+
+.btn-voltar-topo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #1a3a5c 0%, #1a73e8 100%);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 0.9rem 1.4rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(26, 115, 232, 0.35);
+  transition: all 0.2s ease;
+  margin-top: 1rem;
+}
+.btn-voltar-topo:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(26, 115, 232, 0.45);
+}
+.btn-voltar-topo svg { width: 20px; height: 20px; }
+
+@media (max-width: 768px) {
+  .relatorio-mensal header h1 {
+    font-size: 1.6rem;
+  }
+  .relatorio-mensal .container {
+    padding: 1rem;
+  }
+}
+
+@media print {
+  aside, nav, .sidebar-container, button.btn-pdf-topo, button.btn-voltar-topo, .relatorio-mensal .header-controls, .relatorio-mensal .nav-links {
+    display: none !important;
+  }
+  
+  main, .container, body, .relatorio-mensal {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  .relatorio-mensal .secao, .relatorio-mensal .kpi-card, .relatorio-mensal .grafico, .relatorio-mensal .intro, .relatorio-mensal .texto-interpretativo {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+  
+  .relatorio-mensal .secao, .relatorio-mensal .kpi-card, .relatorio-mensal .intro {
+    border: 1px solid #e8eaed;
+  }
+  
+  .relatorio-mensal .kpi-card {
+    border-top: 4px solid var(--azul);
+  }
+  
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Skeleton Loading */
+.skeleton {
+  background: #e0e0e0;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
