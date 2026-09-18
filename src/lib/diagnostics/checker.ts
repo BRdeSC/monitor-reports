@@ -6,6 +6,7 @@ import {
   createOutage,
   resolveOutage,
 } from './db';
+import { checkTcpPort, parseHostPort } from './tcpChecker';
 
 export interface CheckResult {
   is_up: boolean;
@@ -15,6 +16,14 @@ export interface CheckResult {
   errorReason: string | null;
   log: ServiceHealthLog;
 }
+
+// Rastreamento global de travas de concorrência TCP por host:porta
+declare global {
+  // eslint-disable-next-line no-var
+  var __diagnosticsTcpLocks: Map<string, Promise<void>> | undefined;
+}
+const tcpLocks = global.__diagnosticsTcpLocks ?? new Map<string, Promise<void>>();
+global.__diagnosticsTcpLocks = tcpLocks;
 
 export async function checkService(service: MonitoredService): Promise<CheckResult> {
   const start = performance.now();
@@ -26,8 +35,67 @@ export async function checkService(service: MonitoredService): Promise<CheckResu
   let payloadJson: string | null = null;
   let errorReason: string | null = null;
 
-  try {
-    const response = await axios.get(service.url, {
+  const isTcpCheck =
+    service.check_type === 'tcp' ||
+    service.category === 'service' ||
+    (!service.url.startsWith('http://') && !service.url.startsWith('https://'));
+
+  if (isTcpCheck) {
+    // -------------------------------------------------------------
+    // Checagem TCP Socket (Serviço de Infraestrutura / Redes)
+    // -------------------------------------------------------------
+    let targetHost = service.host ? String(service.host).trim() : null;
+    let targetPort = service.port != null ? parseInt(String(service.port).trim(), 10) : null;
+
+    if (!targetHost || !targetPort || isNaN(targetPort)) {
+      const parsed = parseHostPort(service.url);
+      if (parsed) {
+        targetHost = parsed.host;
+        targetPort = parsed.port;
+      }
+    }
+
+    if (!targetHost || !targetPort || isNaN(targetPort)) {
+      isUp = false;
+      latencyMs = 0;
+      statusCode = null;
+      errorReason = `Endereço TCP inválido: Não foi possível identificar host e porta válidos a partir de "${service.url}".`;
+      payloadJson = JSON.stringify({
+        error: errorReason,
+        url: service.url,
+      });
+    } else {
+      // Controle de concorrência: serializa conexões para o mesmo host:porta
+      const targetKey = `${targetHost}:${targetPort}`;
+      const existingLock = tcpLocks.get(targetKey);
+      if (existingLock) {
+        try {
+          await existingLock;
+        } catch {}
+      }
+
+      let resolveLock: () => void = () => {};
+      const lockPromise = new Promise<void>((res) => { resolveLock = res; });
+      tcpLocks.set(targetKey, lockPromise);
+
+      try {
+        const tcpResult = await checkTcpPort(targetHost, targetPort, 3000);
+        isUp = tcpResult.is_up;
+        latencyMs = tcpResult.latencyMs;
+        statusCode = null;
+        errorReason = tcpResult.errorReason;
+        payloadJson = tcpResult.payloadJson;
+      } finally {
+        resolveLock();
+        tcpLocks.delete(targetKey);
+      }
+    }
+  } else {
+    // -------------------------------------------------------------
+    // Checagem HTTP / REST (Aplicação Web / API)
+    // -------------------------------------------------------------
+    try {
+      const response = await axios.get(service.url, {
       timeout: 10000,
       headers: {
         Accept: 'application/json, text/plain, */*',
@@ -59,7 +127,7 @@ export async function checkService(service: MonitoredService): Promise<CheckResu
 
           // Check if checks object has any failed dependency
           let failedChecksCount = 0;
-          let failedNames: string[] = [];
+          const failedNames: string[] = [];
 
           if (payload.checks && typeof payload.checks === 'object') {
             for (const [key, val] of Object.entries(payload.checks)) {
@@ -129,6 +197,7 @@ export async function checkService(service: MonitoredService): Promise<CheckResu
       message: error.message,
     });
   }
+}
 
   // Record health log
   const log = insertHealthLog({

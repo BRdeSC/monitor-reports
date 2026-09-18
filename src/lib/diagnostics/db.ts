@@ -10,6 +10,7 @@ import {
   DiagnosticsStats,
   HealthCheckPayload,
   CheckType,
+  ServiceCategory,
   OutagesFilterOptions,
   OutagesReportSummary,
 } from './types';
@@ -35,12 +36,61 @@ export function getDb(): Database.Database {
 }
 
 function initSchema(db: Database.Database) {
+  // Migração transparente do schema para permitir novos tipos (como TCP) e colunas (category, host, port)
+  const tableCheck = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='monitored_services'").get() as { sql: string } | undefined;
+  
+  if (tableCheck) {
+    const columns = db.prepare("PRAGMA table_info(monitored_services)").all() as { name: string }[];
+    const colNames = columns.map(c => c.name);
+    const hasOldCheck = tableCheck.sql.includes("check_type IN ('intelligent', 'basic')");
+    const hasCategory = colNames.includes('category');
+
+    if (hasOldCheck || !hasCategory) {
+      db.exec(`
+        PRAGMA foreign_keys = OFF;
+        CREATE TABLE monitored_services_mig (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          url TEXT NOT NULL,
+          check_type TEXT NOT NULL,
+          category TEXT NOT NULL DEFAULT 'application',
+          host TEXT,
+          port INTEGER,
+          interval_seconds INTEGER NOT NULL DEFAULT 30,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        INSERT INTO monitored_services_mig (id, name, url, check_type, category, host, port, interval_seconds, is_active, created_at, updated_at)
+        SELECT 
+          id, 
+          name, 
+          url, 
+          check_type, 
+          'application', 
+          NULL, 
+          NULL, 
+          interval_seconds, 
+          is_active, 
+          created_at, 
+          updated_at 
+        FROM monitored_services;
+        DROP TABLE monitored_services;
+        ALTER TABLE monitored_services_mig RENAME TO monitored_services;
+        PRAGMA foreign_keys = ON;
+      `);
+    }
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS monitored_services (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       url TEXT NOT NULL,
-      check_type TEXT NOT NULL CHECK (check_type IN ('intelligent', 'basic')),
+      check_type TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'application',
+      host TEXT,
+      port INTEGER,
       interval_seconds INTEGER NOT NULL DEFAULT 30,
       is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL,
@@ -89,13 +139,14 @@ function initSchema(db: Database.Database) {
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
     db.prepare(`
-      INSERT INTO monitored_services (id, name, url, check_type, interval_seconds, is_active, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO monitored_services (id, name, url, check_type, category, interval_seconds, is_active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       'Monitor Reports (Local)',
       'http://localhost:3000/metrics/api/health',
       'intelligent',
+      'application',
       30,
       1,
       now,
@@ -201,6 +252,9 @@ export function createService(data: {
   name: string;
   url: string;
   check_type: CheckType;
+  category?: ServiceCategory;
+  host?: string | null;
+  port?: number | null;
   interval_seconds?: number;
   is_active?: number;
 }): MonitoredService {
@@ -209,11 +263,14 @@ export function createService(data: {
   const now = new Date().toISOString();
   const interval = data.interval_seconds && data.interval_seconds >= 5 ? data.interval_seconds : 30;
   const active = data.is_active !== undefined ? data.is_active : 1;
+  const category: ServiceCategory = data.category || (data.check_type === 'tcp' ? 'service' : 'application');
+  const host = data.host || null;
+  const port = data.port != null ? Number(data.port) : null;
 
   db.prepare(`
-    INSERT INTO monitored_services (id, name, url, check_type, interval_seconds, is_active, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, data.name.trim(), data.url.trim(), data.check_type, interval, active, now, now);
+    INSERT INTO monitored_services (id, name, url, check_type, category, host, port, interval_seconds, is_active, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, data.name.trim(), data.url.trim(), data.check_type, category, host, port, interval, active, now, now);
 
   return db.prepare('SELECT * FROM monitored_services WHERE id = ?').get(id) as MonitoredService;
 }
@@ -224,6 +281,9 @@ export function updateService(
     name?: string;
     url?: string;
     check_type?: CheckType;
+    category?: ServiceCategory;
+    host?: string | null;
+    port?: number | null;
     interval_seconds?: number;
     is_active?: number;
   }
@@ -236,14 +296,17 @@ export function updateService(
   const name = data.name !== undefined ? data.name.trim() : existing.name;
   const url = data.url !== undefined ? data.url.trim() : existing.url;
   const check_type = data.check_type !== undefined ? data.check_type : existing.check_type;
+  const category = data.category !== undefined ? data.category : (existing.category || 'application');
+  const host = data.host !== undefined ? data.host : existing.host;
+  const port = data.port !== undefined ? (data.port != null ? Number(data.port) : null) : existing.port;
   const interval = data.interval_seconds && data.interval_seconds >= 5 ? data.interval_seconds : existing.interval_seconds;
   const is_active = data.is_active !== undefined ? data.is_active : existing.is_active;
 
   db.prepare(`
     UPDATE monitored_services 
-    SET name = ?, url = ?, check_type = ?, interval_seconds = ?, is_active = ?, updated_at = ?
+    SET name = ?, url = ?, check_type = ?, category = ?, host = ?, port = ?, interval_seconds = ?, is_active = ?, updated_at = ?
     WHERE id = ?
-  `).run(name, url, check_type, interval, is_active, now, id);
+  `).run(name, url, check_type, category, host, port, interval, is_active, now, id);
 
   return db.prepare('SELECT * FROM monitored_services WHERE id = ?').get(id) as MonitoredService;
 }
@@ -351,7 +414,7 @@ export function createOutage(data: {
 
 export function getOutages(filters: OutagesFilterOptions = {}): OutagesReportSummary {
   const db = getDb();
-  const { service_id, period = '24h', status = 'all' } = filters;
+  const { service_id, period = '24h', status = 'all', category = 'all' } = filters;
 
   let timeThreshold: string | null = null;
   const now = Date.now();
@@ -379,6 +442,12 @@ export function getOutages(filters: OutagesFilterOptions = {}): OutagesReportSum
     params.push(service_id);
   }
 
+  if (category === 'service') {
+    conditions.push("(s.category = 'service' OR s.check_type = 'tcp')");
+  } else if (category === 'application') {
+    conditions.push("(s.category != 'service' AND s.check_type != 'tcp')");
+  }
+
   if (timeThreshold) {
     conditions.push('(o.started_at >= ? OR o.resolved_at >= ? OR o.resolved_at IS NULL)');
     params.push(timeThreshold, timeThreshold);
@@ -403,12 +472,13 @@ export function getOutages(filters: OutagesFilterOptions = {}): OutagesReportSum
       o.payload_json,
       s.name as service_name,
       s.check_type,
+      s.category as service_category,
       s.url as service_url
     FROM service_outages o
     JOIN monitored_services s ON o.service_id = s.id
     ${whereClause}
     ORDER BY o.started_at DESC
-  `).all(...params) as (ServiceOutage & { service_name: string; check_type: CheckType; service_url: string })[];
+  `).all(...params) as (ServiceOutage & { service_name: string; check_type: CheckType; service_category: ServiceCategory; service_url: string })[];
 
   let totalDowntime = 0;
   let activeCount = 0;
@@ -438,9 +508,16 @@ export function getOutages(filters: OutagesFilterOptions = {}): OutagesReportSum
   });
 
   // Cálculo de SLA
+  let countFilter = '';
+  if (category === 'service') {
+    countFilter = " AND (category = 'service' OR check_type = 'tcp')";
+  } else if (category === 'application') {
+    countFilter = " AND (category != 'service' AND check_type != 'tcp')";
+  }
+
   const servicesCount = (service_id && service_id !== 'all') 
     ? 1 
-    : Math.max(1, (db.prepare('SELECT COUNT(*) as c FROM monitored_services WHERE is_active = 1').get() as { c: number }).c);
+    : Math.max(1, (db.prepare(`SELECT COUNT(*) as c FROM monitored_services WHERE is_active = 1${countFilter}`).get() as { c: number }).c);
   
   const totalPotentialSeconds = servicesCount * periodSeconds;
   const slaPercentage = totalPotentialSeconds > 0
@@ -480,7 +557,7 @@ export function getDiagnosticsStats(): DiagnosticsStats {
 
   let onlineCount = 0;
   let offlineCount = 0;
-  let responseTimes: number[] = [];
+  const responseTimes: number[] = [];
 
   for (const s of active) {
     if (s.latest_log) {
@@ -495,12 +572,17 @@ export function getDiagnosticsStats(): DiagnosticsStats {
     }
   }
 
-  // Count outages in the last 24h
+  // Count outages in the last 24h with category breakdown
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const outages24hRow = db.prepare(`
-    SELECT COUNT(*) as count FROM service_outages 
-    WHERE started_at >= ?
-  `).get(oneDayAgo) as { count: number };
+    SELECT 
+      COUNT(*) as total_count,
+      COUNT(CASE WHEN s.category = 'service' OR s.check_type = 'tcp' THEN 1 END) as infra_count,
+      COUNT(CASE WHEN s.category != 'service' AND s.check_type != 'tcp' THEN 1 END) as app_count
+    FROM service_outages o
+    JOIN monitored_services s ON o.service_id = s.id
+    WHERE o.started_at >= ?
+  `).get(oneDayAgo) as { total_count: number; infra_count: number; app_count: number };
 
   const avgResponseTime = responseTimes.length > 0
     ? Math.round((responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) * 10) / 10
@@ -519,7 +601,9 @@ export function getDiagnosticsStats(): DiagnosticsStats {
     active_services: activeCount,
     online_services: onlineCount,
     offline_services: offlineCount,
-    recent_outages_count: outages24hRow.count,
+    recent_outages_count: outages24hRow?.total_count || 0,
+    recent_app_outages_count: outages24hRow?.app_count || 0,
+    recent_infra_outages_count: outages24hRow?.infra_count || 0,
     average_response_time_ms: avgResponseTime,
     last_updated: new Date().toISOString(),
   };

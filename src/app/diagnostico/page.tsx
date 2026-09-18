@@ -1,18 +1,16 @@
 'use client'
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   RefreshCw,
   Search,
-  Activity,
-  SlidersHorizontal,
   Loader2,
   AlertCircle,
-  Play,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
 import PlatformSummaryCards from '@/components/diagnostico/PlatformSummaryCards';
 import ServiceRowAccordion from '@/components/diagnostico/ServiceRowAccordion';
+import InfraServiceRow from '@/components/diagnostico/InfraServiceRow';
 import ServiceModal from '@/components/diagnostico/ServiceModal';
 import OutagesModal from '@/components/diagnostico/OutagesModal';
 import { ServiceWithDetails, DiagnosticsStats } from '@/lib/diagnostics/types';
@@ -24,6 +22,9 @@ export default function DiagnosticoPage() {
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [checkingServiceId, setCheckingServiceId] = useState<string | null>(null);
 
+  // Navegação por Abas
+  const [activeTab, setActiveTab] = useState<'applications' | 'infrastructure'>('applications');
+
   // Filtros e busca
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'up' | 'down' | 'paused'>('all');
@@ -32,6 +33,7 @@ export default function DiagnosticoPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [serviceToEdit, setServiceToEdit] = useState<ServiceWithDetails | null>(null);
   const [isOutagesModalOpen, setIsOutagesModalOpen] = useState(false);
+  const [outagesInitialCategory, setOutagesInitialCategory] = useState<'all' | 'application' | 'service'>('all');
 
   // Auto-refresh
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -167,11 +169,18 @@ export default function DiagnosticoPage() {
     }
   };
 
-  // Filtro de serviços
-  const filteredServices = services.filter((s) => {
+  // Divisão dos serviços por categoria
+  const applications = services.filter((s) => s.category !== 'service' && s.check_type !== 'tcp');
+  const infraServices = services.filter((s) => s.category === 'service' || s.check_type === 'tcp');
+
+  const currentList = activeTab === 'applications' ? applications : infraServices;
+
+  // Filtro de serviços dentro da aba ativa
+  const filteredServices = currentList.filter((s) => {
     const matchesSearch =
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.url.toLowerCase().includes(searchQuery.toLowerCase());
+      s.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.host && s.host.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
 
@@ -185,42 +194,46 @@ export default function DiagnosticoPage() {
   });
 
   return (
-    <div className="space-y-8 pb-12 animate-fadeIn">
+    <div className="space-y-6 pb-12 animate-fadeIn">
       {/* HEADER DA PÁGINA */}
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 pb-6">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>
           <h1 className="text-3xl font-black text-slate-100 tracking-tight uppercase flex items-center gap-3">
             <span>Diagnóstico & Health Check</span>
           </h1>
           <div className="flex items-center gap-2 mt-1.5">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
             </span>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-              Sondagem Contínua de Microsserviços & Dependências Reais
+              Sondagem Contínua de Aplicações, Microsserviços & Infraestrutura TCP
             </p>
           </div>
         </div>
 
-        {/* Botoes de Ação Superior */}
+        {/* Botões de Ação Superior */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Toggle Auto-refresh */}
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${autoRefresh
-                ? 'bg-blue-50 border-blue-200 text-blue-700'
-                : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800'
-              }`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+              autoRefresh
+                ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300'
+                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
             title="Alternar atualização automática a cada 10 segundos"
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-blue-600 animate-ping' : 'bg-slate-300'}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-cyan-400 animate-ping' : 'bg-slate-600'}`} />
             <span>{autoRefresh ? `Auto (${secondsUntilRefresh}s)` : 'Pausado'}</span>
           </button>
 
           {/* Botão Relatório de Quedas & Incidentes */}
           <button
-            onClick={() => setIsOutagesModalOpen(true)}
+            onClick={() => {
+              setOutagesInitialCategory(activeTab === 'applications' ? 'application' : 'service');
+              setIsOutagesModalOpen(true);
+            }}
             className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700/80 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 group"
             title="Abrir histórico consolidado e relatório de incidentes"
           >
@@ -237,51 +250,111 @@ export default function DiagnosticoPage() {
           <button
             onClick={handleCheckAll}
             disabled={refreshingAll || loading}
-            className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:border-blue-500 hover:text-blue-600 transition-all shadow-xs active:scale-95 disabled:opacity-50"
+            className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-xs font-bold text-slate-200 hover:border-slate-700 hover:text-white transition-all shadow-xs active:scale-95 disabled:opacity-50"
           >
-            <RefreshCw size={14} className={refreshingAll ? 'animate-spin text-blue-600' : ''} />
+            <RefreshCw size={14} className={refreshingAll ? 'animate-spin text-cyan-400' : ''} />
             <span>{refreshingAll ? 'Sondando...' : 'Verificar Todos Agora'}</span>
           </button>
 
-          {/* Botão Novo Serviço */}
+          {/* Botão + Novo Alvo */}
           <button
             onClick={() => {
               setServiceToEdit(null);
               setIsModalOpen(true);
             }}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-blue-500/15 active:scale-95"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-blue-500/20 active:scale-95"
           >
             <Plus size={16} strokeWidth={2.5} />
-            <span>Novo Serviço</span>
+            <span>Novo Alvo</span>
           </button>
         </div>
       </header>
 
-      {/* 1. RESUMO NO TOPO (CARDS DE STATUS GERAL DA PLATAFORMA) */}
+      {/* 1. NAVEGAÇÃO POR ABAS NO TOPO (LOGO ABAIXO DO HEADER) */}
+      <section className="border-b border-slate-800/80">
+        <div className="flex items-center gap-2">
+          {/* Aba 1: Aplicações */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('applications')}
+            className={`flex items-center gap-2.5 px-6 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider transition-all border-t border-x ${
+              activeTab === 'applications'
+                ? 'bg-slate-900 text-cyan-300 border-slate-700/80 border-b-2 border-b-cyan-400 shadow-md -mb-px'
+                : 'text-slate-400 hover:text-slate-200 border-transparent hover:bg-slate-800/40'
+            }`}
+          >
+            <span className="text-base">🚀</span>
+            <span>Aplicações</span>
+            <span
+              className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                activeTab === 'applications'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                  : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              {applications.length}
+            </span>
+          </button>
+
+          {/* Aba 2: Serviços & Infra */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('infrastructure')}
+            className={`flex items-center gap-2.5 px-6 py-3 rounded-t-2xl text-xs font-bold uppercase tracking-wider transition-all border-t border-x ${
+              activeTab === 'infrastructure'
+                ? 'bg-slate-900 text-cyan-300 border-slate-700/80 border-b-2 border-b-cyan-400 shadow-md -mb-px'
+                : 'text-slate-400 hover:text-slate-200 border-transparent hover:bg-slate-800/40'
+            }`}
+          >
+            <span className="text-base">🖧</span>
+            <span>Serviços & Infra</span>
+            <span
+              className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                activeTab === 'infrastructure'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                  : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              {infraServices.length}
+            </span>
+          </button>
+        </div>
+      </section>
+
+      {/* 2. CARDS DE MÉTRICAS CONTEXTUAIS POR ABA */}
       <section>
-        <PlatformSummaryCards 
-          stats={stats} 
-          loading={loading} 
-          onOpenOutages={() => setIsOutagesModalOpen(true)} 
+        <PlatformSummaryCards
+          activeTab={activeTab}
+          services={services}
+          stats={stats}
+          loading={loading}
+          onOpenOutages={(category) => {
+            setOutagesInitialCategory(category);
+            setIsOutagesModalOpen(true);
+          }}
         />
       </section>
 
-      {/* 2. BARRA DE FILTROS E BUSCA */}
-      <section className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* 3. BARRA DE FILTROS E BUSCA (OTIMIZADA PARA ESPAÇO VERTICAL) */}
+      <section className="bg-slate-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Campo de Busca */}
         <div className="relative flex-1 max-w-md">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filtrar por nome ou URL..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all font-medium"
+            placeholder={
+              activeTab === 'applications'
+                ? 'Filtrar por nome ou URL da aplicação...'
+                : 'Filtrar por nome, host ou porta do serviço...'
+            }
+            className="w-full pl-9 pr-8 py-1.5 bg-slate-950/70 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:border-cyan-500/60 outline-none transition-all font-medium"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 text-xs font-bold"
             >
               ✕
             </button>
@@ -290,40 +363,56 @@ export default function DiagnosticoPage() {
 
         {/* Filtros de Status */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 hidden md:inline">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 hidden md:inline">
             Status:
           </span>
-          {[
-            { id: 'all', label: 'Todos' },
-            { id: 'up', label: 'Operacionais' },
-            { id: 'down', label: 'Fora do Ar' },
-            { id: 'paused', label: 'Pausados' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setStatusFilter(tab.id as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${statusFilter === tab.id
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+          <div className="flex items-center bg-slate-950/60 border border-slate-800 rounded-xl p-1">
+            {[
+              { id: 'all', label: 'Todos' },
+              { id: 'up', label: 'Operacionais' },
+              { id: 'down', label: 'Fora do Ar' },
+              { id: 'paused', label: 'Pausados' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setStatusFilter(tab.id as 'all' | 'up' | 'down' | 'paused')}
+                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                  statusFilter === tab.id
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* 3. TABELA COM ACCORDION (LINHAS EXPANSÍVEIS E RENDERIZAÇÃO DINÂMICA) */}
+      {/* 4. TABELA DE ALVOS (ACCORDION / LINHAS DE SERVIÇOS) */}
       <section className="space-y-2">
-        {/* Cabeçalho discreto das colunas em desktop */}
+        {/* Cabeçalho de colunas desktop adaptativo */}
         {filteredServices.length > 0 && (
           <div className="hidden lg:flex items-center justify-between px-4 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest select-none">
-            <div className="min-w-[180px] max-w-[260px]">Aplicação / Serviço</div>
-            <div className="w-28">Modo</div>
-            <div className="flex-1 min-w-[170px] max-w-sm px-2">Endpoint</div>
-            <div className="w-32 text-right">Latência</div>
-            <div className="w-28 sm:w-32 text-right">Status</div>
-            <div className="pl-3 text-right">Ações</div>
+            {activeTab === 'applications' ? (
+              <>
+                <div className="min-w-[180px] max-w-[260px]">Aplicação / Serviço</div>
+                <div className="w-28">Modo</div>
+                <div className="flex-1 min-w-[170px] max-w-sm px-2">Endpoint HTTP</div>
+                <div className="w-32 text-right">Latência</div>
+                <div className="w-28 sm:w-32 text-right">Status</div>
+                <div className="pl-3 text-right">Ações</div>
+              </>
+            ) : (
+              <>
+                <div className="min-w-[180px] max-w-[260px]">Serviço de Infra</div>
+                <div className="w-32">Protocolo</div>
+                <div className="flex-1 min-w-[170px] max-w-sm px-2">Endereço de Rede</div>
+                <div className="w-32 text-right">Handshake TCP</div>
+                <div className="w-40 sm:w-44 text-right">Status da Porta</div>
+                <div className="pl-3 text-right">Ações</div>
+              </>
+            )}
           </div>
         )}
 
@@ -331,22 +420,41 @@ export default function DiagnosticoPage() {
           <div className="bg-slate-900/40 rounded-2xl border border-slate-800/80 p-16 flex flex-col items-center justify-center space-y-3">
             <Loader2 size={36} className="animate-spin text-cyan-400" />
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Carregando diagnósticos de saúde...
+              Carregando diagnósticos de integridade...
             </p>
           </div>
         ) : filteredServices.length === 0 ? (
           <div className="bg-slate-900/40 rounded-2xl border border-slate-800/80 p-12 text-center space-y-3">
             <AlertCircle size={36} className="text-slate-500 mx-auto" />
-            <h3 className="text-sm font-bold text-slate-200">Nenhum serviço encontrado</h3>
+            <h3 className="text-sm font-bold text-slate-200">
+              {activeTab === 'applications' ? 'Nenhuma aplicação encontrada' : 'Nenhum serviço de infraestrutura encontrado'}
+            </h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
               {searchQuery || statusFilter !== 'all'
-                ? 'Nenhum serviço corresponde aos filtros aplicados.'
-                : 'Você ainda não cadastrou nenhum serviço monitorado. Clique em "+ Novo Serviço" para começar.'}
+                ? 'Nenhum alvo corresponde aos filtros aplicados nesta aba.'
+                : activeTab === 'applications'
+                ? 'Você ainda não cadastrou nenhuma aplicação web ou API monitorada. Clique em "+ Novo Alvo" para começar.'
+                : 'Você ainda não cadastrou nenhum serviço de infraestrutura (MySQL, PostgreSQL, Redis, Brokers). Clique em "+ Novo Alvo" e selecione "Serviço / Infra" para começar.'}
             </p>
           </div>
-        ) : (
+        ) : activeTab === 'applications' ? (
           filteredServices.map((service) => (
             <ServiceRowAccordion
+              key={service.id}
+              service={service}
+              onCheckNow={handleCheckNow}
+              onToggleStatus={handleToggleStatus}
+              onEdit={(s) => {
+                setServiceToEdit(s);
+                setIsModalOpen(true);
+              }}
+              onDelete={handleDeleteService}
+              isChecking={checkingServiceId === service.id}
+            />
+          ))
+        ) : (
+          filteredServices.map((service) => (
+            <InfraServiceRow
               key={service.id}
               service={service}
               onCheckNow={handleCheckNow}
@@ -362,7 +470,7 @@ export default function DiagnosticoPage() {
         )}
       </section>
 
-      {/* MODAL DE CADASTRO / EDIÇÃO */}
+      {/* MODAL DE CADASTRO / EDIÇÃO (+ NOVO ALVO) */}
       <ServiceModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -378,7 +486,9 @@ export default function DiagnosticoPage() {
         isOpen={isOutagesModalOpen}
         onClose={() => setIsOutagesModalOpen(false)}
         services={services}
+        initialCategory={outagesInitialCategory}
       />
     </div>
   );
 }
+

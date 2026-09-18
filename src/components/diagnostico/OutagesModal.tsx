@@ -23,6 +23,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   services: MonitoredService[];
+  initialCategory?: 'all' | 'application' | 'service';
 }
 
 // Formata segundos em texto amigável: ex 4747s -> "1h 19m 7s"
@@ -60,14 +61,22 @@ function formatDateTime(isoStr?: string | null): string {
   }
 }
 
-export default function OutagesModal({ isOpen, onClose, services }: Props) {
+export default function OutagesModal({ isOpen, onClose, services, initialCategory = 'all' }: Props) {
   const [data, setData] = useState<OutagesReportSummary | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Filtros
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'application' | 'service'>(initialCategory);
   const [selectedPeriod, setSelectedPeriod] = useState<'24h' | '7d' | '30d' | 'all'>('24h');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'resolved'>('all');
+
+  // Atualiza categoria quando o prop initialCategory mudar
+  useEffect(() => {
+    if (initialCategory) {
+      setSelectedCategory(initialCategory);
+    }
+  }, [initialCategory]);
 
   // Snapshot visualizador
   const [inspectingPayload, setInspectingPayload] = useState<{ title: string; json: string } | null>(null);
@@ -77,6 +86,7 @@ export default function OutagesModal({ isOpen, onClose, services }: Props) {
     try {
       const params = new URLSearchParams();
       params.set('period', selectedPeriod);
+      if (selectedCategory !== 'all') params.set('category', selectedCategory);
       if (selectedServiceId !== 'all') params.set('service_id', selectedServiceId);
       if (selectedStatus !== 'all') params.set('status', selectedStatus);
 
@@ -90,7 +100,7 @@ export default function OutagesModal({ isOpen, onClose, services }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod, selectedServiceId, selectedStatus]);
+  }, [selectedCategory, selectedPeriod, selectedServiceId, selectedStatus]);
 
   useEffect(() => {
     if (isOpen) {
@@ -204,21 +214,45 @@ export default function OutagesModal({ isOpen, onClose, services }: Props) {
 
           {/* 2. FILTROS DE CONSULTA */}
           <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {/* Filtro Rápido por Categoria */}
+              <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1">
+                {[
+                  { id: 'all', label: 'Todos' },
+                  { id: 'application', label: 'Apenas Aplicações' },
+                  { id: 'service', label: 'Apenas Infraestrutura' },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setSelectedCategory(cat.id as any);
+                      setSelectedServiceId('all');
+                    }}
+                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                      selectedCategory === cat.id
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
               {/* Filtro de Período */}
               <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1">
                 {[
-                  { id: '24h', label: '24 horas' },
-                  { id: '7d', label: '7 dias' },
-                  { id: '30d', label: '30 dias' },
-                  { id: 'all', label: 'Todos' },
+                  { id: '24h', label: '24h' },
+                  { id: '7d', label: '7d' },
+                  { id: '30d', label: '30d' },
+                  { id: 'all', label: 'Tudo' },
                 ].map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setSelectedPeriod(p.id as any)}
-                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
                       selectedPeriod === p.id
-                        ? 'bg-blue-600 text-white shadow-xs'
+                        ? 'bg-slate-800 text-cyan-300 shadow-xs'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -227,19 +261,25 @@ export default function OutagesModal({ isOpen, onClose, services }: Props) {
                 ))}
               </div>
 
-              {/* Filtro por Aplicação / Serviço */}
+              {/* Filtro por Alvo / Serviço */}
               <div className="flex items-center gap-1.5">
                 <select
                   value={selectedServiceId}
                   onChange={(e) => setSelectedServiceId(e.target.value)}
                   className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-cyan-500 font-medium"
                 >
-                  <option value="all">Todas as aplicações</option>
-                  {services.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
+                  <option value="all">Todos os alvos</option>
+                  {services
+                    .filter((s) => {
+                      if (selectedCategory === 'application') return s.category !== 'service' && s.check_type !== 'tcp';
+                      if (selectedCategory === 'service') return s.category === 'service' || s.check_type === 'tcp';
+                      return true;
+                    })
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} {s.category === 'service' || s.check_type === 'tcp' ? '(Infra TCP)' : '(Aplicação)'}
+                      </option>
+                    ))}
                 </select>
               </div>
             </div>
@@ -286,7 +326,7 @@ export default function OutagesModal({ isOpen, onClose, services }: Props) {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-950/80 border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                      <th className="py-3 px-4">Aplicação</th>
+                      <th className="py-3 px-4">Alvo / Serviço</th>
                       <th className="py-3 px-4">Início da Queda</th>
                       <th className="py-3 px-4">Retorno</th>
                       <th className="py-3 px-4 text-right">Duração (Downtime)</th>
@@ -300,17 +340,24 @@ export default function OutagesModal({ isOpen, onClose, services }: Props) {
 
                       return (
                         <tr key={outage.id} className="hover:bg-slate-800/40 transition-colors">
-                          {/* Serviço Afetado */}
+                          {/* Alvo / Serviço Afetado */}
                           <td className="py-3 px-4 font-medium text-white whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <span>{outage.service_name || 'Serviço'}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                outage.check_type === 'intelligent'
-                                  ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
-                                  : 'bg-slate-800 text-slate-400 border-slate-700'
-                              }`}>
-                                {outage.check_type === 'intelligent' ? 'Inteligente' : 'Básico'}
-                              </span>
+                              <span className="font-semibold text-slate-100">{outage.service_name || 'Alvo'}</span>
+                              {outage.service_category === 'service' || outage.check_type === 'tcp' ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-purple-500/15 text-purple-300 border-purple-500/30 font-medium">
+                                  <span>🖧 Infraestrutura TCP</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-blue-500/15 text-blue-300 border-blue-500/30 font-medium">
+                                  <span>🚀 Aplicação</span>
+                                </span>
+                              )}
+                              {outage.check_type === 'intelligent' && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded border bg-cyan-500/10 text-cyan-400 border-cyan-500/20 font-medium">
+                                  IA
+                                </span>
+                              )}
                             </div>
                           </td>
 

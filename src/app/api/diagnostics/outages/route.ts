@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const service_id = searchParams.get('service_id') || undefined;
     const period = (searchParams.get('period') as OutagesFilterOptions['period']) || '24h';
     const status = (searchParams.get('status') as OutagesFilterOptions['status']) || 'all';
+    const category = (searchParams.get('category') as OutagesFilterOptions['category']) || 'all';
 
     const validPeriod: OutagesFilterOptions['period'] = ['24h', '7d', '30d', 'all'].includes(period)
       ? period
@@ -19,10 +20,15 @@ export async function GET(request: NextRequest) {
       ? status
       : 'all';
 
+    const validCategory: OutagesFilterOptions['category'] = ['all', 'application', 'service'].includes(category)
+      ? category
+      : 'all';
+
     const data = getOutages({
       service_id,
       period: validPeriod,
       status: validStatus,
+      category: validCategory,
     });
 
     return NextResponse.json({

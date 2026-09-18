@@ -1,10 +1,14 @@
-export type CheckType = 'intelligent' | 'basic';
+export type CheckType = 'intelligent' | 'basic' | 'tcp';
+export type ServiceCategory = 'application' | 'service';
 
 export interface MonitoredService {
   id: string;
   name: string;
   url: string;
   check_type: CheckType;
+  category?: ServiceCategory;
+  host?: string | null;
+  port?: number | null;
   interval_seconds: number;
   is_active: number; // 1 = active, 0 = paused
   created_at: string;
@@ -31,6 +35,7 @@ export interface ServiceOutage {
   payload_json?: string | null;
   service_name?: string;
   check_type?: CheckType;
+  service_category?: ServiceCategory;
   service_url?: string;
 }
 
@@ -38,6 +43,7 @@ export interface OutagesFilterOptions {
   service_id?: string;
   period?: '24h' | '7d' | '30d' | 'all';
   status?: 'all' | 'active' | 'resolved';
+  category?: 'all' | 'application' | 'service';
 }
 
 export interface OutagesReportSummary {
@@ -82,6 +88,8 @@ export interface DiagnosticsStats {
   online_services: number;
   offline_services: number;
   recent_outages_count: number;
+  recent_app_outages_count?: number;
+  recent_infra_outages_count?: number;
   average_response_time_ms: number;
   last_updated: string;
 }
