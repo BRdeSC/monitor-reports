@@ -10,7 +10,8 @@ import {
   Users, 
   FileSpreadsheet,
   Terminal,
-  ChevronRight
+  ChevronRight,
+  HeartPulse
 } from 'lucide-react';
 
 export default function Navigation() {
@@ -22,6 +23,7 @@ export default function Navigation() {
     { name: 'Status do Ambiente', href: '/performance', icon: LayoutDashboard },
     { name: 'Relatório de Utilização', href: '/reports', icon: FileSpreadsheet },
     { name: 'Métricas Gerais', href: '/', icon: Activity },
+    { name: 'Diagnóstico & Saúde', href: '/diagnostico', icon: HeartPulse },
     { name: 'Dashboards', href: '/dashboards', icon: BarChart3 },
     { name: 'Servidores', href: '/servidores', icon: Server },
     { name: 'Usuários', href: '/usuarios', icon: Users },
